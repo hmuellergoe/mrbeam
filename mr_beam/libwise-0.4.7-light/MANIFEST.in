@@ -1,0 +1,4 @@
+include *.md
+recursive-include libwise *.h	
+recursive-include libwise/presets *.preset 
+recursive-include libwise/ressource *.preset *.png *.svg *.gif
