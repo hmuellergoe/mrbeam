@@ -1,4 +1,4 @@
-from imagingbase.regpy_functionals import Functional
+from regpy.functionals import Functional
 from regpy.operators import Operator
 import numpy as np
 import tensorflow as tf

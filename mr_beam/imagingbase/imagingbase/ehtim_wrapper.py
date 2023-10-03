@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.optimize as opt
 import matplotlib.pyplot as plt
-from imagingbase.regpy_functionals import Functional
+from regpy.functionals import Functional
 from regpy.operators import Operator
 from regpy.discrs import Discretization
 from ehtim.imaging.imager_utils import chisqdata, chisq, chisqgrad, regularizer, regularizergrad, embed
@@ -9,6 +9,7 @@ from ehtim.obsdata import Obsdata
 import ehtim.image as image
 import ehtim.observing.obs_helpers as obsh
 import ehtim.const_def as ehc
+import ehtim.scattering as so
 
 import ehtplot.color
 
@@ -19,7 +20,7 @@ from multiprocessing import Pool
 # Constants & Definitions
 ##################################################################################################
 
-NORM_REGULARIZER = False
+NORM_REGULARIZER = False  # ANDREW TODO change this default in the future
 
 MAXLS = 100  # maximum number of line searches in L-BFGS-B
 NHIST = 100  # number of steps to store for hessian approx
@@ -28,7 +29,7 @@ STOP = 1.e-8  # convergence criterion
 
 DATATERMS = ['vis', 'bs', 'amp', 'cphase', 'cphase_diag',
              'camp', 'logcamp', 'logcamp_diag', 'logamp']
-REGULARIZERS = ['gs', 'tv', 'tv2', 'l1w', 'lA', 'patch', 'simple', 'compact', 'compact2', 'rgauss', 'flux']
+REGULARIZERS = ['gs', 'tv', 'tv2', 'l1w', 'lA', 'patch', 'simple', 'compact', 'compact2', 'rgauss', 'flux', 'epsilon']
 
 nit = 0  # global variable to track the iteration number in the plotting callback
 
@@ -106,10 +107,15 @@ class EhtimWrapper():
         # Normalize prior image to total flux and limit imager range to prior values > clipfloor
         if (not self.norm_init):
             self.nprior = self.Prior.imvec[self.embed_mask]
-            ninit = self.InitIm.imvec[self.embed_mask]
+            self.ninit = self.InitIm.imvec[self.embed_mask]
         else:
             self.nprior = (self.flux * self.Prior.imvec / np.sum((self.Prior.imvec)[self.embed_mask]))[self.embed_mask]
-            ninit = (self.flux * self.InitIm.imvec / np.sum((self.InitIm.imvec)[self.embed_mask]))[self.embed_mask]
+            self.ninit = (self.flux * self.InitIm.imvec / np.sum((self.InitIm.imvec)[self.embed_mask]))[self.embed_mask]
+
+        if self.logim:
+            self._xinit = np.log(self.ninit)
+        else:
+            self._xinit = self.ninit
 
         if len(self.nprior) == 0:
             raise Exception("clipfloor too large: all prior pixels have been clipped!")
@@ -350,20 +356,41 @@ class EhtimFunctional(Functional):
         self.handler = handler
         super().__init__(domain)
 
-    def _eval(self, imvec):
+    def _eval(self, imarr):
+        if self.handler.logim:
+            imarr = np.exp(imarr)
         if self.handler.dataterm:
-            return self.handler._chisq(imvec)
+            return self.handler._chisq(imarr)
         else:
-            return self.handler._reg(imvec)
+            return self.handler._reg(imarr)
 
-    def _gradient(self, imvec):
+    def _gradient(self, imarr):
+        if self.handler.logim:
+            imarr = np.exp(imarr)
         if self.handler.dataterm:
-            return self.handler._chisqgrad(imvec)
+            if self.handler.logim:
+                return self.handler._chisqgrad(imarr)*imarr
+            return self.handler._chisqgrad(imarr)
         else:
-            return self.handler._reggrad(imvec)
+            if self.handler.logim:
+                return self.handler._reggrad(imarr)*imarr
+            return self.handler._reggrad(imarr)
 
     def _proximal(self, imvec, tau):
         return NotImplementedError
+    
+class EmptyFunctional(Functional):
+    def __init__(self, domain):
+        super().__init__(domain)
+    
+    def _eval(self, imvec):
+        return 0.
+    
+    def _gradient(self, imvec):
+        return 0.*imvec
+
+    def _proximal(self, imvec, tau):
+        return imvec
 
 class EhtimOperator(Operator):
     def __init__(self, handler, domain, codomain=None):

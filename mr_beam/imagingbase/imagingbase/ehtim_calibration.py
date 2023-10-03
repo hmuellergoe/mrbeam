@@ -29,7 +29,7 @@ class Calibrator:
         self.obs = self.avg_coherent(0, scan_avg=True, err_type=self.err_type)
 
         # Estimate the total flux density from the zero baseline
-        zbl_tot   = np.median(self.obs.unpack_bl(self.zero_baseline_a1,self.zero_baseline_a2,'amp')['amp'])
+        zbl_tot   = np.median(self.obs.unpack_bl(self.zero_baseline_a1,self.zero_baseline_a2,'amp'))[1]#['amp'])
         if self.zbl > zbl_tot:
             print('Warning: Specified total compact flux density ' +
                   'exceeds total flux density')
@@ -71,8 +71,6 @@ class Calibrator:
             return self.obs.copy()
 
 
-        #vis_avg = eh.statistics.dataframes.coh_avg_vis(self.obs, dt=inttime, return_type='rec',
-        #                               err_type=err_type, scan_avg=scan_avg, seed=seed)
         vis_avg = coh_avg_vis(self.obs, dt=inttime, return_type='rec',
                                        err_type=err_type, scan_avg=scan_avg, seed=seed)
 
@@ -103,7 +101,5 @@ class Calibrator:
         
         self.obs_sc_init = self.obs_sc.copy()
         
-        
-    
         
 

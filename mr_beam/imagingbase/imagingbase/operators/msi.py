@@ -12,8 +12,6 @@ from MSI.MSDictionaries import RectDictionary as msiRectDictionary
 from MSI.MSDictionaries import BesselDictionary as msiBesselDictionary
 from MSI.MSMDDictionaries import BesselDictionary as msmdBesselDictionary
 
-from imagingbase.regpy_utils import power
-
 from lightwise.nputils import convolve
 
 from joblib import Parallel, delayed
@@ -29,7 +27,7 @@ class WaveletTransform(Operator):
         self.nr_scales = int(max_scale-min_scale)
         self.toret = np.zeros((self.nr_scales, self.shape[0], self.shape[1]))
         
-        codomain = power(domain, self.nr_scales)
+        codomain = domain**self.nr_scales
         super().__init__(domain, codomain, linear=True)
         
     def _eval(self, x):
@@ -61,7 +59,7 @@ class DOGTransform(Operator):
         self.nr_scales = len(widths)
         self.toret = np.zeros((self.nr_scales, self.shape[0], self.shape[1]))
         
-        codomain = power(domain, self.nr_scales)
+        codomain = domain**self.nr_scales
         super().__init__(domain, codomain, linear=True)
         
     def _eval(self, x):

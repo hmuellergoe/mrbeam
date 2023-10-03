@@ -1,14 +1,67 @@
 import numpy as np
 
-from regpy.operators import CoordinateProjection, DirectSum, Zero
+from regpy.operators import CoordinateProjection
+from regpy.operators import DirectSum, Reshape, Zero
 from regpy.discrs import Discretization
 from regpy.solvers import HilbertSpaceSetting
 from regpy.hilbert import L2
 
 from imagingbase.ehtim_wrapper import EhtimFunctional
-from imagingbase.regpy_utils import Reshape, power
+from imagingbase.ehtim_wrapper_pol import EhtimWrapperPol
 
 from MSI.Image import ConversionBase
+
+
+
+class PolImager():
+    def __init__(self, handler):
+        self.handler = handler
+        return
+    
+    def flag_obs(self, obs_sc):
+        if np.isnan(np.sum(obs_sc.data['qvis'])):
+            flagged_obs = obs_sc.copy()
+            indices = np.isnan(obs_sc.data['qvis'])
+            for j in range(len(obs_sc.data)):
+                if indices[j]:
+                    bl = [obs_sc.data['t1'][j], obs_sc.data['t2'][j]]
+                    flagged_obs = flagged_obs.flag_bl(bl)
+            obs_sc = flagged_obs.copy()
+            
+        return obs_sc
+    
+    def init_polarimetry(self, coeff, obs_sc, pol_frac=-0.01, cinit=True, initimg=None):
+        init = self.handler.coordinate_proj(coeff)
+        if initimg==None:
+            initimg = self.handler.wrapper.formatoutput(self.handler.op(coeff))
+        coeff_pol = self.handler.coordinate_proj.adjoint(init)
+        
+        wrapper = EhtimWrapperPol(obs_sc, initimg, initimg, self.handler.zbl, d='pvis', clipfloor=-100, pol_solve=(1,1,1), pol_trans=False)
+        pol = PolHandler(wrapper, self.handler.mask, self.handler.op, coeff_pol*self.handler.rescaling)
+    
+        if cinit:
+            init = np.zeros((3, np.sum(self.handler.mask)))
+            init[1] = pol_frac * pol.coordinate_proj(coeff_pol*self.handler.rescaling)
+            init = init.flatten()
+        
+            return [init, pol]
+        
+        else: 
+            return pol
+    
+    def init_circular_pol(self, coeff, obs, initimg=None, cinit=True):
+        init = self.handler.coordinate_proj(coeff)
+        if initimg==None:
+            initimg = self.handler.wrapper.formatoutput(self.handler.op(coeff))
+        coeff_pol = self.handler.coordinate_proj.adjoint(init)
+        wrapperV = EhtimWrapperPol(obs, initimg, initimg, self.handler.zbl, d='pvis', clipfloor=-100, pol_solve=(1,1,1), pol_trans=False, stokesv=True)
+        polV = PolHandler(wrapperV, self.handler.mask, self.handler.op, coeff_pol*self.handler.rescaling)
+        initv = np.zeros(polV.vfunc.domain.shape)
+         
+        if cinit:
+            return [initv, polV]
+        else:
+            return polV
 
 class PolHandler():
     def __init__(self, wrapper, mask, dictionary, init):
@@ -29,12 +82,12 @@ class PolHandler():
         
         self.length = len(mask) // (self.npix**2)
         
-        self.domain = power(self.grid, self.length)
+        self.domain = self.grid**(self.length)
         
         self.coordinate_proj = CoordinateProjection(self.domain, mask)
         
         #projection for Q and U
-        self.domain_proj = power(self.domain, 2)
+        self.domain_proj = self.domain**2
         self.proj = CoordinateProjection(self.domain_proj, self.mask)
         
         #Q and U wavelet dictionary
@@ -61,6 +114,12 @@ class PolHandler():
         # empty setting class
         self.setting_op = self.final_func.domain.identity
         self.final_setting = HilbertSpaceSetting(self.setting_op, L2, L2)
+        
+        # functionals for Stokes V imaging
+        self.vproj = CoordinateProjection(self.op.domain, mask)
+        self.vdomain = Discretization(self.op.codomain.size)
+        self.vfunc = EhtimFunctional(self.wrapper, self.vdomain) * Reshape(self.op.codomain, self.vdomain) * self.op *  self.vproj.adjoint
+        self.vsetting = HilbertSpaceSetting(self.vproj.adjoint, L2, L2)
 
     def find_pol_init(self, img):
         iimage = img.get_polvec('i')
@@ -87,7 +146,6 @@ class PolHandler():
         self.final_op_shifted = self.op_proj_final + self.shift
         self.final_op = Reshape(self.final_op_shifted.codomain, self.func.domain) * self.final_op_shifted
         self.final_func = self.func * self.final_op
-
 
 
 

@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import inspect
+import os
+from importlib.abc import Loader, MetaPathFinder
+from importlib.machinery import ModuleSpec
+from sys import meta_path
+from types import ModuleType
+
+import pdoc
+
+
+# Monkey-patch inspect to not lookup docstrings in superclasses. We don't want every operator to
+# automatically inherit the Operator base class docstring.
+
+def getdoc(obj):
+    try:
+        doc = obj.__doc__ or ''
+    except AttributeError:
+        return ''
+    if not isinstance(doc, str):
+        return ''
+    return inspect.cleandoc(doc)
+
+
+inspect.getdoc = getdoc
+
+
+# Add mock imports for optional modules, so pdoc does not break when inspecting them.
+
+class MockImporter(MetaPathFinder, Loader):
+    def __init__(self, *modules):
+        self.modules = modules
+
+    def create_module(self, spec):
+        return ModuleType(spec.name)
+
+    def exec_module(self, module):
+        pass
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname.split('.', 1)[0] in self.modules:
+            return ModuleSpec(fullname, self, is_package=True)
+
+
+mocked = []
+
+try:
+    import ngsolve
+except ModuleNotFoundError:
+    mocked.append('ngsolve')
+
+try:
+    import pynfft
+except ModuleNotFoundError:
+    mocked.append('pynfft')
+
+meta_path.append(MockImporter(*mocked))
+
+
+# Finally, write the docs.
+
+config = dict(
+    latex_math=True,
+    sort_identifiers=False,
+)
+
+def write_files(m):
+    f = os.path.join('doc', *m.url().split('/'))
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    try:
+        with open(f, 'w+', encoding='utf-8') as w:
+            w.write(m.html(**config))
+    except Exception:
+        os.unlink(f)
+        raise
+    for submodule in m.submodules():
+        write_files(submodule)
+
+
+mod = pdoc.Module('regpy')
+pdoc.link_inheritance()
+write_files(mod)

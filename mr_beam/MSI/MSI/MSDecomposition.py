@@ -82,7 +82,60 @@ class WaveletTransform2D():
         _, d = self.wt_dec(img, self.wavelet_fct, 'symm', level, axis=axis)
         return d
 
-  
+'''    
+class DoG2D():
+    def __init__(self, min_scale=1, max_scale=6, step=1, angle=0, ellipticity=1, beam=None):
+        self.min_scale = min_scale
+        self.max_scale = max_scale
+        self.step = step
+        self.angle = angle
+        self.ellipticity = ellipticity
+        self.widths = np.arange(self.min_scale, self.max_scale, self.step)
+        self.bg = 1 
+        self.beam = beam 
+        
+        
+    def decompose(self, img, compute_noise=False):
+        scales = wtutils.dogdec(img.data, widths=self.widths, angle=self.angle, ellipticity=self.ellipticity, boundary="symm")
+        scales = [nputils.resize_like(s, img.data) for s in scales]
+        
+        #scales_noises = wtutils.dog_noise_factor(self.bg, widths=self.widths, angle=self.angle, ellipticity=self.ellipticity, beam=self.beam)  
+
+        toret = []
+        
+        if compute_noise:
+            scales_noises = wtutils.dog_noise_factor(self.bg, widths=self.widths, angle=self.angle, ellipticity=self.ellipticity, beam=self.beam)  
+    
+            decomposed = zip(scales, self.widths, scales_noises)
+    
+            for scale, width, scales_noise in decomposed:
+                scale_img = imgutils.Image.from_image(img, scale.real)
+                toret.append([scale_img, width, scales_noise])
+        
+        else:
+            decomposed = zip(scales, self.widths)
+            
+            for scale, width in decomposed:
+                scale_img = imgutils.Image.from_image(img, scale.real)
+                toret.append([scale_img, width])
+
+        return toret
+    
+    
+    def compute_noise(self):
+        assert self.beam is not None
+
+        scales_noise = wtutils.dog_noise_factor(self.bg, widths=self.widths, angle=self.angle, ellipticity=self.ellipticity, beam=self.beam)  
+        
+        decomposed = zip(self.widths, scales_noise)
+        
+        toret = []
+        
+        for width, scales_noise in decomposed:
+            toret.append([width, scales_noise])        
+        
+        return toret
+'''    
 class DoG2D():
     def __init__(self, widths, angle=0, ellipticities=1, all_scales=False, smoothing_scale=None, beam=None, nsigma=None, support=None, **args):
         self.angle = angle

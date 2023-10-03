@@ -1,15 +1,15 @@
 import numpy as np
 
-from imagingbase.ehtim_wrapper import EhtimWrapper
+from imagingbase.ehtim_wrapper import EhtimWrapper, EhtimObsdata
 
-from ehtim.imaging.pol_imager_utils import mcv_r, mcv, polchisqdata, polchisq, polregularizer, polregularizergrad, unpack_poltuple, embed_pol, make_q_image, make_u_image
+from ehtim.imaging.pol_imager_utils import mcv_r, mcv, polchisqdata, polchisq, polchisqgrad, polregularizer, polregularizergrad, unpack_poltuple, embed_pol, make_q_image, make_u_image, make_p_image
 import ehtim.image as image
 
 ##################################################################################################
 # Constants & Definitions
 ##################################################################################################
 
-NORM_REGULARIZER = False
+NORM_REGULARIZER = False #ANDREW TODO change this default in the future
 
 MAXLS = 100 # maximum number of line searches in L-BFGS-B
 NHIST = 100 # number of steps to store for hessian approx
@@ -22,8 +22,14 @@ REGULARIZERS = ['msimple', 'hw', 'ptv']
 nit = 0 # global variable to track the iteration number in the plotting callback
 
 class EhtimWrapperPol(EhtimWrapper):
-    def __init__(self, Obsdata, InitIm, Prior, flux, d='vis', **kwargs):
+    def __init__(self, Obsdata, InitIm, Prior, flux, d='vis', stokesv=False, amp=False, **kwargs):
         super().__init__(Obsdata, InitIm, Prior, flux, d='vis', **kwargs)
+        
+        #For pol, rescaling only addresses mvec, not Stokes I
+        self.Prior.imvec *= self.rescaling
+        self.InitIm.imvec *= self.rescaling
+        self.flux *= self.rescaling
+        
         self.d = d
 
         self.dataterm = self.d in DATATERMS
@@ -31,7 +37,7 @@ class EhtimWrapperPol(EhtimWrapper):
         assert self.dataterm or self.regterm
         
         # some kwarg default values
-        self.pol_prim = kwargs.get('pol_prim', 'amp_phase')
+        self.pol_trans = kwargs.get('pol_trans', True)
         self.pol_solve = kwargs.get('pol_solve', (0,1,1))
         
         # Make sure data and regularizer options are ok
@@ -68,7 +74,7 @@ class EhtimWrapperPol(EhtimWrapper):
         self.nimage = len(self.iimage)
     
         # initial pol image
-        if self.pol_prim ==  "amp_phase":
+        if self.pol_trans:
             if len(self.InitIm.qvec) and (np.any(self.InitIm.qvec!=0) or np.any(self.InitIm.uvec!=0)):
                 init1 = (np.abs(self.InitIm.qvec + 1j*self.InitIm.uvec) / self.InitIm.imvec)[self.embed_mask]
                 init2 = (np.arctan2(self.InitIm.uvec, self.InitIm.qvec) / 2.0)[self.embed_mask]
@@ -82,7 +88,7 @@ class EhtimWrapperPol(EhtimWrapper):
             self.inittuple = np.array((self.iimage, init1, init2))
             self.xtuple =  mcv_r(self.inittuple)
     
-        elif self.pol_prim == "qu":
+        else:
             if len(self.InitIm.qvec) and (np.any(self.InitIm.qvec!=0) or np.any(self.InitIm.uvec!=0)):
                 init1 = self.InitIm.qvec
                 init2 = self.InitIm.uvec
@@ -95,6 +101,12 @@ class EhtimWrapperPol(EhtimWrapper):
             # Change of variables    
             self.inittuple = np.array((self.iimage, init1, init2))
             self.xtuple =  self.inittuple.copy()
+            
+        self.vdata = self.Obsdata.unpack(['vvis'], conj=True)['vvis']
+        self.vsigma = self.Obsdata.unpack(['vsigma'], conj=True)['vsigma']
+        
+        self.mdata = self.Obsdata.unpack(['mamp'], conj=True)['mamp']
+        self.msigma = self.Obsdata.unpack(['msigma'], conj=True)['msigma']
             
             
     # Get data and fourier matrices for the data terms
@@ -111,34 +123,77 @@ class EhtimWrapperPol(EhtimWrapper):
             
         self.nit = 0
         
+        if stokesv:
+            self._chisq = self._vchisq
+            self._chisqgrad = self._vchisqgrad
+        elif amp:
+            self._chisq = self._mchisq
+            self._chisqgrad = self._mchisqgrad
+        else:
+            self._chisq = self._pchisq
+            self._chisqgrad = self._pchisqgrad
+               
     # Define the chi^2 and chi^2 gradient
-    def _chisq(self, imtuple):
-        toret = polchisq(imtuple, self.A, self.data, self.sigma, self.d, ttype=self.ttype, mask=self.embed_mask, pol_prim=self.pol_prim)
+    def _pchisq(self, imtuple):
+        toret = polchisq(imtuple, self.A, self.data, self.sigma, self.d, ttype=self.ttype, mask=self.embed_mask, pol_trans=self.pol_trans)
         if self.ttype == 'fast':
             toret *= self.rescaling
         return toret
 
-    def _chisqgrad(self, imtuple):
-        c = polchisqgrad(imtuple, self.A, self.data, self.sigma, self.d, ttype=self.ttype, mask=self.embed_mask, pol_prim=self.pol_prim)
-        toret = c.reshape((3, self.InitIm.xdim*self.InitIm.ydim))
-        if self.ttype == 'fast':
-            toret *= self.rescaling
-        return toret
+    def _pchisqgrad(self, imtuple):
+        if self.pol_trans:
+            c = polchisqgrad(imtuple, self.A, self.data, self.sigma, self.d, ttype=self.ttype, mask=self.embed_mask, pol_trans=self.pol_trans)
+            toret = c.reshape((3, self.InitIm.xdim*self.InitIm.ydim))
+            if self.ttype == 'fast':
+                toret *= self.rescaling
+            return toret
+        else:
+            iimage = imtuple[0]
+            pimage = make_p_image(imtuple, self.pol_trans)
+            psamples = np.dot(self.A, pimage)
+            pdiff = (self.data - psamples) / (self.sigma**2)
+            zeros =  np.zeros(len(iimage))
+            
+            qimage = imtuple[1]
+            uimage = imtuple[2]
+            
+            gradi = zeros
+
+            if self.pol_solve[1]!=0:
+                gradq = -np.real(np.dot(self.A.conj().T, pdiff)) / len(self.data)
+            else:
+                gradq = zeros
+
+            if self.pol_solve[2]!=0:
+                gradu = -np.imag(np.dot(self.A.conj().T, pdiff)) / len(self.data)
+            else:
+                gradu = zeros
+
+            gradout = np.array((gradi, gradq, gradu))
+            toret = gradout.reshape((3, self.InitIm.xdim*self.InitIm.ydim))
+            if self.ttype == 'fast':
+                toret *= self.rescaling
+            return toret
 
         # Define the regularizer and regularizer gradient
     def _reg(self, imtuple):
-        toret = polregularizer(imtuple, self.embed_mask, self.flux, 
+        imtup = imtuple.copy()
+        imtup[1] *= self.rescaling
+        toret = polregularizer(imtup, self.embed_mask, self.flux, 
                               self.Prior.xdim, self.Prior.ydim, self.Prior.psize, self.d, **self.kwargs)
         if self.ttype == 'fast':
             toret *= self.rescaling
         return toret
     
     def _reggrad(self, imtuple):
-        c = polregularizergrad(imtuple, self.embed_mask, self.flux, 
+        imtup = imtuple.copy()
+        imtup[1] *= self.rescaling
+        c = polregularizergrad(imtup, self.embed_mask, self.flux, 
                               self.Prior.xdim, self.Prior.ydim, self.Prior.psize, self.d, **self.kwargs)
         toret = c.reshape((3, self.InitIm.xdim*self.InitIm.ydim))
         if self.ttype == 'fast':
             toret *= self.rescaling
+        toret[1] /= self.rescaling
         return toret
     
     def formatoutput(self, res):
@@ -146,7 +201,7 @@ class EhtimWrapperPol(EhtimWrapper):
         out *= self.rescaling
         # Format output
         outcv = unpack_poltuple(out, self.xtuple, self.nimage, self.pol_solve)
-        if self.pol_prim == "amp_phase":
+        if self.pol_trans:
             outcut = mcv(outcv)  #change of variables
         else:
             outcut = outcv
@@ -157,8 +212,8 @@ class EhtimWrapperPol(EhtimWrapper):
             out = outcut
     
         iimage = out[0]
-        qimage = make_q_image(out, self.pol_prim)
-        uimage = make_u_image(out, self.pol_prim)
+        qimage = make_q_image(out, self.pol_trans)
+        uimage = make_u_image(out, self.pol_trans)
     
         outim = image.Image(iimage.reshape(self.Prior.ydim, self.Prior.xdim), self.Prior.psize,
                              self.Prior.ra, self.Prior.dec, rf=self.Prior.rf, source=self.Prior.source,
@@ -167,109 +222,77 @@ class EhtimWrapperPol(EhtimWrapper):
         
         return outim
     
-from ehtim.imaging.pol_imager_utils import chisqgrad_m, chisqgrad_pbs, chisqgrad_p_nfft, chisqgrad_m_nfft, chisqgrad_pbs, make_p_image   
-    
-def polchisqgrad(imtuple, A, data, sigma, dtype, ttype='direct',
-                 mask=[], pol_prim="amp_phase",pol_solve=(0,1,1)):
-    
-    """return the chi^2 gradient for the appropriate dtype
-    """
-
-    chisqgrad = np.zeros((3,len(imtuple[0])))
-    if not dtype in DATATERMS:
-        return chisqgrad
-    if ttype not in ['fast','direct','nfft']:
-        raise Exception("Possible ttype values are 'fast' and 'direct'!")
-
-    if ttype == 'direct':
-        if dtype == 'pvis':
-            chisqgrad = chisqgrad_p(imtuple, A, data, sigma, pol_prim,pol_solve)
-
-        elif dtype == 'm':
-            chisqgrad = chisqgrad_m(imtuple, A, data, sigma, pol_prim,pol_solve)
-
-        elif dtype == 'pbs':
-            chisqgrad = chisqgrad_pbs(imtuple, A, data, sigma, pol_prim,pol_solve)
-    
-    elif ttype== 'fast':
-        raise Exception("FFT not yet implemented in polchisqgrad!")
-
-    elif ttype== 'nfft':
-        if len(mask)>0 and np.any(np.invert(mask)):
-            imtuple = embed_pol(imtuple, mask, randomfloor=True)
-
-        if dtype == 'pvis':
-            chisqgrad = chisqgrad_p_nfft(imtuple, A, data, sigma, pol_prim,pol_solve)
-
-        elif dtype == 'm':
-            chisqgrad = chisqgrad_m_nfft(imtuple, A, data, sigma, pol_prim,pol_solve)
-
-        elif dtype == 'pbs':
-            chisqgrad = chisqgrad_pbs(imtuple, A, data, sigma, pol_prim,pol_solve)
-
-        if len(mask)>0 and np.any(np.invert(mask)):
-            chisqgrad = np.array((chisqgrad[0][mask],chisqgrad[1][mask],chisqgrad[2][mask]))
-
-    return chisqgrad    
-    
-    
-def chisqgrad_p(imtuple, Amatrix, p, sigmap, pol_prim="amp_phase",pol_solve=(0,1,1)):
-    """Polarimetric ratio chi-squared gradient
-    """
-    
-
-    iimage = imtuple[0]
-    pimage = make_p_image(imtuple, pol_prim)
-    psamples = np.dot(Amatrix, pimage)
-    pdiff = (p - psamples) / (sigmap**2)
-    zeros =  np.zeros(len(iimage))
+    # Define the chi^2 and chi^2 gradient for Stokes V
+    def _vchisq(self, vvec):
         
-    if pol_prim=="amp_phase":
-
-        mimage = imtuple[1]
-        chiimage = imtuple[2]
+        if self.ttype != 'direct':
+            raise NotImplementedError
+        vsample = np.dot(self.A, vvec)
+        chisq =  np.sum(np.abs((self.vdata - vsample))**2/(self.vsigma**2)) / (2*len(self.vdata)) 
         
-        if pol_solve[0]!=0:
-            gradi = -np.real(mimage * np.exp(-2j*chiimage) * np.dot(Amatrix.conj().T, pdiff)) / len(p)
-        else:
-            gradi = zeros
-
-        if pol_solve[1]!=0:
-            gradm = -np.real(iimage*np.exp(-2j*chiimage) * np.dot(Amatrix.conj().T, pdiff)) / len(p)
-        else:
-            gradm = zeros
-
-        if pol_solve[2]!=0:
-            gradchi = -2 * np.imag(pimage.conj() * np.dot(Amatrix.conj().T, pdiff)) / len(p)
-        else:
-            gradchi = zeros
-
-        gradout = np.array((gradi, gradm, gradchi))
+        return chisq
+    
+    def _vchisqgrad(self, vvec):
         
-    elif pol_prim=="qu":
-        
+        if self.ttype != 'direct':
+            raise NotImplementedError
+            
+        vsample = np.dot(self.A, vvec)
+        vdiff = (self.vdata - vsample) / (self.vsigma**2)
+            
+        gradv = -np.real(np.dot(self.A.conj().T, vdiff)) / len(self.vsigma)
+
+        return gradv
+    
+    def _mchisq(self, imtuple):
+        if self.ttype != 'direct':
+            raise NotImplementedError
+        iimage = imtuple[0]
+        pimage = make_p_image(imtuple, self.pol_trans)
+        msamples = np.dot(self.A, pimage) / np.dot(self.A, iimage)
+        return np.sum((self.mdata-np.abs(msamples))**2/(self.msigma**2)) / (2*len(self.mdata)) 
+    
+    def _mchisqgrad(self, imtuple):
+        assert self.pol_trans == False
+        if self.ttype != 'direct':
+            raise NotImplementedError
+        iimage = imtuple[0]
+        zeros =  np.zeros(len(iimage))
+        pimage = make_p_image(imtuple, self.pol_trans)
+        msamples = np.dot(self.A, pimage) / np.dot(self.A, iimage)
+        mdiff = np.asarray((self.mdata-np.abs(msamples))/(self.msigma**2), dtype=complex)
+        mdiff *= np.dot(self.A, pimage) / (np.abs(np.dot(self.A, iimage))*np.abs(np.dot(self.A, pimage)))
+    
         qimage = imtuple[1]
         uimage = imtuple[2]
         
         gradi = zeros
 
-        if pol_solve[1]!=0:
-            gradq = -np.real(np.dot(Amatrix.conj().T, pdiff)) / len(p)
+        if self.pol_solve[1]!=0:
+            gradq = -np.real(np.dot(self.A.conj().T, mdiff)) / len(self.mdata)
         else:
             gradq = zeros
 
-        if pol_solve[2]!=0:
-            gradu = -np.imag(np.dot(Amatrix.conj().T, pdiff)) / len(p)
+        if self.pol_solve[2]!=0:
+            gradu = -np.imag(np.dot(self.A.conj().T, mdiff)) / len(self.mdata)
         else:
             gradu = zeros
 
         gradout = np.array((gradi, gradq, gradu))
-
-
-    else:
-        raise Exception("polarimetric representation %s not added to pol gradient yet!" % pol_prim)
-
-    return gradout
+        
+        return gradout
     
-    
-    
+    def updateobs(self, obs):
+        assert self.rml
+        self.Obsdata = EhtimObsdata(obs, num_cores=self.num_cores)
+                
+        # Get data and fourier matrices for the data terms    
+        (self.data, self.sigma, self.A) = polchisqdata(self.Obsdata, self.Prior, self.embed_mask, self.d, **self.kwargs)
+        if self.ttype == 'direct' or self.ttype == 'nfft':
+            try:
+                self.A *= self.rescaling
+            except:
+                self.A = list(self.A)
+                for i in range(len(self.A)):
+                    self.A[i] *= self.rescaling
+                self.A = tuple(self.A)

@@ -4,14 +4,14 @@ import ehtim as eh
 from imagingbase.ehtim_wrapper import EhtimWrapper, EhtimFunctional, EhtimOperator
 from regpy.operators import CoordinateProjection
 from regpy.solvers import HilbertSpaceSetting
-from imagingbase.solvers.forward_backward_splitting import Forward_Backward_Splitting
+from regpy.solvers.forward_backward_splitting import Forward_Backward_Splitting
 from imagingbase.solvers.gradient_descent import Gradient_Descent
 from regpy.hilbert import L2
-from imagingbase.regpy_functionals import L0, FunctionalProductSpace
-from imagingbase.operators.msi import DOGDictionary
+from regpy.functionals import L0, FunctionalProductSpace
+from imagingbase.operators.msi import DOGDictionary, BesselDictionary
+from imagingbase.solvers.utils import BuildMerger
 
 import regpy.stoprules as rules
-from imagingbase.regpy_utils import Display, power
 
 from MSI.Image import ConversionBase
 
@@ -33,14 +33,6 @@ class MinimizationHandler:
         self.cbar_lims = cbar_lims
         
         self.img = prior.regrid_image(self.fov, self.npix+1)
-
-        #Define domain
-        self.convert = ConversionBase()
-        self.grid = self.convert.find_domain_ehtim(self.img)
-        
-        self.widths = kwargs.get('widths', self.find_widths(threshold=threshold, repair=repair, to_cat=to_cat) )
-
-        self.domain = power(self.grid, len(self.widths))
         
         self.debias = kwargs.get('debias', False)
 
@@ -60,9 +52,38 @@ class MinimizationHandler:
         self.wrapper_logcamp = EhtimWrapper(self.obs_sc.copy(), self.img.copy(), self.img.copy(), self.zbl,
                               d='logcamp', maxit=100, ttype='direct', clipfloor=-100,
                               rescaling=self.rescaling, debias=self.debias)
+
+        #Define domain
+        self.convert = ConversionBase()
+        self.grid = self.convert.find_domain_ehtim(self.img)
+        
+        self.bessel = kwargs.get('bessel', False)
+        self.fov_widths = kwargs.get('fov_widths', 0.5)
+        
+        if self.bessel:
+            self.widths = kwargs.get('widths', self.wrapper.find_widths(threshold=threshold, fov=self.fov_widths))
+        else:
+            self.widths = kwargs.get('widths', self.find_widths(threshold=threshold, repair=repair, to_cat=to_cat) )
+
+        self.md = kwargs.get('md', False)   
+        self.ellipticities = kwargs.get('ellipticities', 1)
+        self.angle = kwargs.get('angle', 0)
+            
+        if self.md:
+            self.length = (len(self.widths)-1)*(self.ellipticities+1)+1
+        else:
+            self.length = len(self.widths)
+        self.domain = self.grid**self.length
  
         #Define forward operator 
-        self.op = DOGDictionary(self.domain, self.grid, self.widths, self.grid.shape)
+        if self.md:
+            if self.bessel:
+                self.op =  1/(self.ellipticities) * BesselDictionary(self.domain, self.grid, self.widths, self.grid.shape, md=self.md, ellipticities=self.ellipticities, angle=self.angle, rml=True)
+            else:
+                self.op =  1/(self.ellipticities) * DOGDictionary(self.domain, self.grid, self.widths, self.grid.shape, md=self.md, ellipticities=self.ellipticities, angle=self.angle, rml=True)
+        else:
+            self.op = DOGDictionary(self.domain, self.grid, self.widths, self.grid.shape, md=self.md, ellipticities=self.ellipticities, angle=self.angle)
+        
         #self.dog_trafo = DOGTransform(self.grid, self.widths)
         self.forward = EhtimOperator(self.wrapper, self.grid)
         
@@ -81,11 +102,18 @@ class MinimizationHandler:
                 + data_term['logcamp'] * self.data_fidelity_logcamp    
                 
         #Define penalty term
-        self.weights = np.ones(len(self.widths))
+        self.weights = np.ones(self.length)
         self.funcs_l0 = []
-        for i in range(len(self.widths)):
+        try:
+            dogs = self.op.dogs
+        except:
+            try:
+                dogs = self.op.ops[0].dogs
+            except:
+                dogs = self.op.ops[0].wavelets
+        for i in range(self.length):
             self.funcs_l0.append( L0(self.setting.Hdomain.discr.summands[i]) )
-            self.weights[i] = np.max(self.op.dogs[i])
+            self.weights[i] = np.max(dogs[i])
         self.penalty_l0 = FunctionalProductSpace(self.funcs_l0, self.setting.Hdomain.discr, self.weights)
         
     def find_widths(self, threshold = 0.1*10**9, repair=[39.98, 47.24], to_cat=[1, 2, 4]):
@@ -122,16 +150,16 @@ class MinimizationHandler:
         return widths
 
     def find_initial_guess(self, data, alpha, reverse=True):
-        init = np.zeros((len(self.widths), self.npix+1, self.npix+1))
-        self.decision = np.zeros((len(self.widths), 10))
+        init = np.zeros((self.length, self.npix+1, self.npix+1))
+        self.decision = np.zeros((self.length, 10))
 
         guess = init.copy()
 
-        self.noise_levels = np.ones(len(self.widths))
+        self.noise_levels = np.ones(self.length)
         
         for j in range(10):
             threshold = 0.5*j
-            for i in range(len(self.widths)):
+            for i in range(self.length):
                 guess[::-1][i] = data
                 test = self.penalty_l0.proximal(guess.flatten(), threshold * 1/self.weights)
                 self.decision[i, j] = self.data_fidelity_closure(test) + alpha * self.penalty_l0(test)
@@ -165,7 +193,7 @@ class MinimizationHandler:
         #indices = []
         self.thresh = threshold*1/self.weights
         
-        for i in range(len(self.widths) - nr_scales[0] - 1):
+        for i in range(self.length - nr_scales[0] - 1):
             self.thresh[i] = 10000*1/self.weights[i]
             
         print("Current minimum", self.minimum)
@@ -173,7 +201,7 @@ class MinimizationHandler:
         print("reverse mode:", reverse)
         
         if reverse:
-            for i in range(len(self.widths)):
+            for i in range(self.length):
                 test_thresh = self.thresh.copy()
                 for j in range(20):
                     test_thresh[i] = 0.5*j/self.weights[i]
@@ -185,7 +213,7 @@ class MinimizationHandler:
                         print("Updated at scale", i, "to threshold", j*0.5, "to minimum", self.minimum)
                         
         else:
-            for i in range(len(self.widths)):
+            for i in range(self.length):
                 test_thresh = self.thresh.copy()
                 for j in range(20):
                     test_thresh[len(self.widths)-1-i] = 0.5*j/self.weights[len(self.widths)-1-i]
@@ -207,6 +235,67 @@ class MinimizationHandler:
             init = self.imgr.out_last().blur_circ(blur_frac*self.res)
             self.imgr.init_next = init
             self.imgr.make_image_I(show_updates=False)
+            
+    def doghit(self, init, data_term, cycles=10, maxit=50, epochs=10, sys_noise=0.02, uv_zblcut=0.1*10**9, stop=1e-4, last_epochs=False, solution_interval=600, alpha=0.1, tau=10, **kwargs):
+        print("Round 1: Find initial guess ...")
+        
+        #run minimization
+        img1 = self.first_round(init, data_term, cycles=cycles, maxit=maxit, epochs=epochs, sys_noise=sys_noise, stop=stop, last_epochs=last_epochs)
+
+        #phase-calibration
+        table1 = eh.selfcal(self.obs_sc, img1, method='phase', ttype=self.wrapper.ttype, solution_interval=solution_interval, caltable=True)
+        self.obs_sc = eh.selfcal(self.obs_sc, img1, method='phase', ttype=self.wrapper.ttype, solution_interval=solution_interval)
+        self.updateobs(self.obs_sc)
+        
+        print("Round 2: Multiscalar Imaging with closure quantities ...")
+
+        img2 = img1.regrid_image(self.fov, self.npix+1)
+
+        #Find initial guess by expressing img by dictionary
+        #Decomposition computed by Landweber inversion
+        data = self.convert.ehtim_to_numpy(img2)/self.rescaling
+               
+        init = self.find_initial_guess(data, alpha, reverse=True)
+
+        self.change_dictionary()
+
+        wtfcts2 = self.second_round(init, tau, alpha*self.noise_levels, **kwargs)
+         
+        self.find_projection(wtfcts2)
+
+        reco2 = self.op(wtfcts2)
+
+        img2 = self.wrapper.formatoutput(reco2)
+        
+        return [img2, wtfcts2, table1, self.obs_sc]
+    
+    def calibrate_full(self, obs_sc, obs_sc_init, img, wtfcts, uv_zblcut, solution_interval=3600):
+        test_rescales = np.linspace(0.5, 1.5, 100)
+        fits = np.zeros(100)
+
+        obs_test = obs_sc_init.copy()
+        obs_test = obs_test.flag_uvdist(uv_min=0, uv_max=uv_zblcut, output='flagged')
+        wrapper_test = EhtimWrapper(obs_test.copy(), img.copy(), img.copy(), self.zbl,
+                              d='amp', maxit=100, ttype='direct', clipfloor=-100,
+                              rescaling=self.rescaling, debias=self.debias)
+        data_fidelity_amp = EhtimFunctional(wrapper_test, self.grid)
+
+        for i in range(100):
+            fits[i] = data_fidelity_amp(test_rescales[i]*img.imarr()/self.rescaling)
+            
+        wtfcts *= test_rescales[np.argmin(fits)]
+        zbl = test_rescales[np.argmin(fits)]
+        self.zbl = zbl
+        img.imvec *= test_rescales[np.argmin(fits)]
+
+        #phase-calibration
+        table2 = eh.selfcal(obs_sc, img, method='both', ttype='direct', solution_interval=solution_interval, caltable=True)
+        obs_sc = eh.selfcal(obs_sc, img, method='both', ttype='direct', solution_interval=solution_interval)
+        self.updateobs(obs_sc.copy())
+        
+        return [img, wtfcts, table2, self.obs_sc]
+        
+    
     
     def first_round(self, init, data_term, cycles=10, maxit=50, epochs=10, sys_noise=0.02, uv_zblcut=0.1*10**9, stop=1e-4, last_epochs=False):
         # constant regularization weights
@@ -239,7 +328,7 @@ class MinimizationHandler:
         #solver.callback = lambda x: wrapper._plotcur(dog_dictionary(x))
         stoprule = rules.CombineRules(
             [rules.CountIterations(max_iterations=max_iterations),
-            Display(self.penalty_l0, 'Penalty')]
+            rules.Display(self.penalty_l0, 'Penalty')]
         )
         
         #Run solver
@@ -455,6 +544,11 @@ class MinimizationHandler:
         self.wrapper_logcamp.updateobs(obs_sc.copy())
         self.wrapper_cphase.updateobs(obs_sc.copy())
         
+        #self.dog_trafo = DOGTransform(self.grid, self.widths)
+        self.forward = EhtimOperator(self.wrapper, self.grid)
+        self.setting_forward = HilbertSpaceSetting(op=self.forward, Hdomain=L2, Hcodomain=L2)
+        
+        
         self.data_fidelity_vis = EhtimFunctional(self.wrapper, self.grid) * self.op
         self.data_fidelity_amp = EhtimFunctional(self.wrapper_amp, self.grid) * self.op
         self.data_fidelity_cphase = EhtimFunctional(self.wrapper_cphase, self.grid) * self.op
@@ -471,7 +565,7 @@ class MinimizationHandler:
             if display: 
                 stoprule = rules.CombineRules(
                     [rules.CountIterations(max_iterations=maxit),
-                    Display(data_fidelity, 'Data Fidelity')
+                    rules.Display(data_fidelity, 'Data Fidelity')
                     ]
                 )
     
@@ -510,7 +604,7 @@ class MinimizationHandler:
 
         self.widths *= old_psize * self.npix/self.fov
 
-        self.domain = power(self.grid, len(self.widths))
+        self.domain = self.grid**(len(self.widths))
         
         #Initialize wrapper objects to ehtim
         self.wrapper = EhtimWrapper(self.obs_sc.copy(), self.img.copy(), self.img.copy(), self.zbl,
@@ -547,10 +641,62 @@ class MinimizationHandler:
                 + self.data_term['logcamp'] * self.data_fidelity_logcamp      
                 
         #Define penalty term
-        self.weights = np.ones(len(self.widths))
+        self.weights = np.ones(self.length)
         self.funcs_l0 = []
-        for i in range(len(self.widths)):
+        try:
+            dogs = self.op.dogs
+        except:
+            try:
+                dogs = self.op.ops[0].dogs
+            except:
+                dogs = self.op.ops[0].wavelets
+        for i in range(self.length):
             self.funcs_l0.append( L0(self.setting.Hdomain.discr.summands[i]) )
-            self.weights[i] = np.max(self.op.dogs[i])
+            self.weights[i] = np.max(dogs[i])
         self.penalty_l0 = FunctionalProductSpace(self.funcs_l0, self.setting.Hdomain.discr, self.weights)
                 
+        
+    def change_dictionary(self):
+        #change notation compatible with builder
+        #self.dmap = self.grid.zeros()
+        self.merger = self.op.ops[0]       
+        self.args = {}
+        
+        #build dogdictionary
+        Builder = BuildMerger(self)
+        widths_dogs = Builder._match_bessel_dog()
+        
+        self.op =  1/(self.ellipticities) * DOGDictionary(self.domain, self.grid, widths_dogs, self.grid.shape, md=self.md, ellipticities=self.ellipticities, angle=self.angle, rml=True)
+        
+        #update functionals
+        #Define Hilbert Space Setting for full operator
+        self.setting = HilbertSpaceSetting(op=self.op, Hdomain=L2, Hcodomain=L2)
+        
+        #Define data fidelity term
+        self.data_fidelity_vis = EhtimFunctional(self.wrapper, self.grid) * self.op
+        self.data_fidelity_amp = EhtimFunctional(self.wrapper_amp, self.grid) * self.op       
+        self.data_fidelity_cphase = EhtimFunctional(self.wrapper_cphase, self.grid) * self.op
+        self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
+               
+        self.data_fidelity_closure = self.data_term['cphase'] * self.data_fidelity_cphase \
+                + self.data_term['logcamp'] * self.data_fidelity_logcamp      
+                
+        #Define penalty term
+        self.weights = np.ones(self.length)
+        self.funcs_l0 = []
+        try:
+            dogs = self.op.dogs
+        except:
+            try:
+                dogs = self.op.ops[0].dogs
+            except:
+                dogs = self.op.ops[0].wavelets
+        for i in range(self.length):
+            self.funcs_l0.append( L0(self.setting.Hdomain.discr.summands[i]) )
+            self.weights[i] = np.max(dogs[i])
+        self.penalty_l0 = FunctionalProductSpace(self.funcs_l0, self.setting.Hdomain.discr, self.weights)
+        
+        
+        
+        
+        

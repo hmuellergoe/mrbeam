@@ -30,7 +30,7 @@ class Sinc2D(imgutils.AbstractBeam):
         return beam/np.sum(beam)
         
     def _sinc_support(self):
-        return np.int(np.ceil(2 * self.nsigma * self.width))  
+        return int(np.ceil(2 * self.nsigma * self.width))  
 
 class Bessel2D(imgutils.AbstractBeam):
     def __init__(self, a, b, degree=0, nsigma=50, support=None):
@@ -71,6 +71,6 @@ class Bessel2D(imgutils.AbstractBeam):
         return beam/np.sum(beam)
         
     def _bessel_support(self):
-        support = np.int(np.ceil(2 * self.nsigma * np.sqrt(self.a*self.b)))   
-        return np.int(2 * (support // 2) + 1)
+        support = int(np.ceil(2 * self.nsigma * np.sqrt(self.a*self.b)))   
+        return int(2 * (support // 2) + 1)
 

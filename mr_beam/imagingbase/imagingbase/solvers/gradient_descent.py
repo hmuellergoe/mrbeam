@@ -1,5 +1,5 @@
-from imagingbase.regpy_utils import RegpySolver as Solver
-from imagingbase.regpy_functionals import Functional
+from regpy.solvers import Solver
+from regpy.functionals import Functional
 
 """
 Minimizes data_fidelity(f) with gradient descent algorithm

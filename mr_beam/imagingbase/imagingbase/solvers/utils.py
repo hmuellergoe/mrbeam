@@ -1,6 +1,5 @@
 from scipy.optimize import curve_fit   
 from imagingbase.operators.msi import DOGDictionary 
-from imagingbase.regpy_utils import power
 from regpy.discrs import Discretization
 import numpy as np
 
@@ -13,7 +12,7 @@ class BuildMerger():
     def _build_merger(self):
         widths = self._match_bessel_dog()
         grid = Discretization(self.obj.dmap.shape)
-        domain = power(grid, self.obj.merger.length)
+        domain = grid**(self.obj.merger.length)
         merger = DOGDictionary(domain, grid, widths, grid.shape, num_cores=self.obj.wrapper.num_cores, **self.obj.args)
         return merger
         
@@ -51,8 +50,8 @@ def delta(shape):
     toret[tuple(np.asarray(shape)//2)] = 1
     return toret
     
-import numba
-from numba import njit
+#import numba
+#from numba import njit
 
 #@njit()
 #def shift1D(arr, num):

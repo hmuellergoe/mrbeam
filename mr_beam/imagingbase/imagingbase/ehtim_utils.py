@@ -156,4 +156,4 @@ def bootstrap(data, statistic, num_samples=int(1e3), alpha='1sig',wrapping_varia
     stat = np.sort(stat)
     bootstrap_value = np.median(stat)+m
     bootstrap_CI = [stat[int((alpha/2.0)*num_samples)]+m, stat[int((1-alpha/2.0)*num_samples)]+m]
-    return bootstrap_value, bootstrap_CI        
+    return bootstrap_value, bootstrap_CI  

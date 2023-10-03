@@ -7,8 +7,6 @@ Created on Feb 22, 2012
 @author: fmertens
 
 Requirement: astropy version >= 0.3
-
-This is a python3 ported version of Florent Mertens WISE code: https://github.com/flomertens/wise
 '''
 
 import os
@@ -61,7 +59,7 @@ def gaussian(size, nsigma=None, width=None, center=None, center_offset=None, ang
     if center_offset is not None:
         center += nputils.get_pair(center_offset)
 
-    indices = np.indices(np.array(size, dtype=np.int))
+    indices = np.indices(np.array(size, dtype=int))
     p = [0, 1, center, [sigmax, sigmay], angle]
 
     return nputils.gaussian_fct(*p)(indices)

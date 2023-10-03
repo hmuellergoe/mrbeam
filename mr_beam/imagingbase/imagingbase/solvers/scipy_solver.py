@@ -1,7 +1,7 @@
 import scipy.optimize as opt
 import numpy as np
-from imagingbase.regpy_utils import RegpySolver as Solver
-from imagingbase.regpy_functionals import Functional
+from regpy.solvers import Solver
+from regpy.functionals import Functional
 from regpy.operators import Identity
 
 class Minimize():

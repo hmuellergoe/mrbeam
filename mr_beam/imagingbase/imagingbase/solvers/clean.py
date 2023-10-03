@@ -1,4 +1,4 @@
-from imagingbase.regpy_utils import RegpySolver as Solver
+from regpy.solvers import Solver
 
 import logging
 import numpy as np

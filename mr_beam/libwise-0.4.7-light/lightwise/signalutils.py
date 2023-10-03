@@ -2,8 +2,6 @@
 Created on Feb 22, 2012
 
 @author: fmertens
-
-This is a python3 ported version of Florent Mertens WISE code: https://github.com/flomertens/wise
 '''
 
 import numpy as np

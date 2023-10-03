@@ -59,12 +59,11 @@ class ClosureTracePol(Operator):
             + self.final_matrix1 @ self.final_matrix2 @ final_matrix3h @ self.final_matrix4 \
             - self.final_matrix1 @ self.final_matrix2 @ final_matrix2h @ self.final_matrix2 @ self.final_matrix3 @ self.final_matrix4 \
             + final_matrix1h @ self.final_matrix2 @ self.final_matrix3 @ self.final_matrix4
-          
-    
+              
         return np.trace(final_matrix, axis1=1, axis2=2)
     
     def _adjoint(self, h):
-        final_matrix = np.zeros((len(h),2,2))
+        final_matrix = np.zeros((len(h),2,2), dtype=complex)
         final_matrix[:,0,0] = h
         final_matrix[:,1,1] = h
         
@@ -82,9 +81,9 @@ class ClosureTracePol(Operator):
         
         brightness_matrix = np.zeros((2, 2, self.domain.shape[1]), dtype=complex)
         brightness_matrix[0,0] = A4[0].transpose() @ vismatrix1[:,0,0] \
-                            + A4[1].transpose() @ vismatrix2[:,0,0] \
-                            + A4[2].transpose() @ vismatrix3[:,0,0] \
-                            + A4[3].transpose() @ vismatrix4[:,0,0]
+                    + A4[1].transpose() @ vismatrix2[:,0,0] \
+                    + A4[2].transpose() @ vismatrix3[:,0,0] \
+                    + A4[3].transpose() @ vismatrix4[:,0,0]
         brightness_matrix[0,1] = A4[0].transpose() @ vismatrix1[:,0,1] \
                     + A4[1].transpose() @ vismatrix2[:,0,1] \
                     + A4[2].transpose() @ vismatrix3[:,0,1] \
@@ -98,7 +97,7 @@ class ClosureTracePol(Operator):
                     + A4[2].transpose() @ vismatrix3[:,1,1] \
                     + A4[3].transpose() @ vismatrix4[:,1,1]
                     
-        toret = np.zeros(self.domain.shape)
+        toret = np.zeros(self.domain.shape, dtype=complex)
         
         toret[0] = brightness_matrix[0,0] + brightness_matrix[1,1]
         toret[1] = brightness_matrix[0,1] + brightness_matrix[1,0]

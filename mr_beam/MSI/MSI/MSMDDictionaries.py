@@ -6,7 +6,7 @@ from MSI.utils.beams import Bessel2D as bessel
 import numpy as np
 
 class DOGDictionary():
-    def __init__(self, widths, shape, angle=0, ellipticities=6, nsigma=10, support=None, **args):
+    def __init__(self, widths, shape, angle=0, ellipticities=6, nsigma=10, support=None, rml=False, **args):
         self.widths = widths
         self.angle = angle
         self.angles = np.linspace(0, np.pi, ellipticities+1)[:-1] + self.angle
@@ -15,9 +15,12 @@ class DOGDictionary():
         
         self.nsigma = nsigma
         self.support = support
+        self.rml = rml
         
-        #self.length = (len(self.widths)-1)*(self.ellipticities+1)+1
-        self.length = (len(self.widths))*(self.ellipticities+1)
+        if self.rml:
+            self.length = (len(self.widths)-1)*(self.ellipticities+1)+1
+        else:
+            self.length = (len(self.widths))*(self.ellipticities+1)
         
         self.dirac = np.zeros(self.shape)
         self.dirac[self.shape[0]//2, self.shape[1]//2] = 1      
@@ -51,21 +54,32 @@ class DOGDictionary():
         filtered_circ = [b.convolve(self.dirac) for b in beams_circ]
         
         list_wavelets = []
-        for i in range(len(beams_ell)):
-            remainder = len(self.angles) * filtered_circ[i]
+        if self.rml:
+            for i in range(len(beams_ell)):
+                remainder = len(self.angles) * filtered_circ[i]
+                for j in range(len(self.angles)):
+                    list_wavelets.append(filtered_ell[i][j]-filtered_circ[i+1])
+                    remainder -= filtered_ell[i][j]
+                list_wavelets.append(remainder)
+
+            list_wavelets.append( len(self.angles) * filtered_circ[-1] )
+            
+        else:
+            for i in range(len(beams_ell)):
+                remainder = len(self.angles) * filtered_circ[i]
+                for j in range(len(self.angles)):
+                    list_wavelets.append(filtered_ell[i][j]-filtered_circ[i+1])
+                    remainder -= filtered_ell[i][j]
+    #            list_wavelets.append(remainder)
+                list_wavelets.append(remainder / len(self.angles))
+            
+            remainder = len(self.angles) * filtered_circ[-1]
             for j in range(len(self.angles)):
-                list_wavelets.append(filtered_ell[i][j]-filtered_circ[i+1])
-                remainder -= filtered_ell[i][j]
-#            list_wavelets.append(remainder)
-            list_wavelets.append(remainder / len(self.angles))
-        
-        remainder = len(self.angles) * filtered_circ[-1]
-        for j in range(len(self.angles)):
-            list_wavelets.append(filtered_ell[-1][j])
-            remainder -= filtered_ell[-1][j]
-#        list_wavelets.append(remainder)
-#        list_wavelets.append(remainder / len(self.angles))
-        list_wavelets.append( filtered_circ[-1] )
+                list_wavelets.append(filtered_ell[-1][j])
+                remainder -= filtered_ell[-1][j]
+    #        list_wavelets.append(remainder)
+    #        list_wavelets.append(remainder / len(self.angles))
+            list_wavelets.append( filtered_circ[-1] )
         
         return list_wavelets
 
@@ -76,7 +90,7 @@ class DOGDictionary():
         return list_wavelets
 
 class BesselDictionary():
-    def __init__(self, widths, shape, angle=0, ellipticities=6, nsigma=50, support=None, **args):
+    def __init__(self, widths, shape, angle=0, ellipticities=6, nsigma=50, support=None, rml=False, **args):
         self.widths = widths
         self.angle = angle
         self.angles = np.linspace(0, np.pi, ellipticities+1)[:-1] + self.angle
@@ -85,9 +99,12 @@ class BesselDictionary():
         
         self.nsigma = nsigma
         self.support = support
+        self.rml = rml
         
-        #self.length = (len(self.widths)-1)*(self.ellipticities+1)+1
-        self.length = (len(self.widths))*(self.ellipticities+1)
+        if self.rml:
+            self.length = (len(self.widths)-1)*(self.ellipticities+1)+1
+        else:
+            self.length = (len(self.widths))*(self.ellipticities+1)
         
         self.dirac = np.zeros(self.shape)
         self.dirac[self.shape[0]//2, self.shape[1]//2] = 1      
@@ -121,22 +138,32 @@ class BesselDictionary():
         filtered_circ = [b.convolve(self.dirac) for b in beams_circ]
         
         list_wavelets = []
-        for i in range(len(beams_ell)):
-            remainder = len(self.angles) * filtered_circ[i]
+        if self.rml:
+            for i in range(len(beams_ell)):
+                remainder = len(self.angles) * filtered_circ[i]
+                for j in range(len(self.angles)):
+                    list_wavelets.append(filtered_ell[i][j]-filtered_circ[i+1])
+                    remainder -= filtered_ell[i][j]
+                list_wavelets.append(remainder)
+
+            list_wavelets.append( len(self.angles) * filtered_circ[-1] )
+        else:
+            for i in range(len(beams_ell)):
+                remainder = len(self.angles) * filtered_circ[i]
+                for j in range(len(self.angles)):
+                    list_wavelets.append(filtered_ell[i][j]-filtered_circ[i+1])
+                    remainder -= filtered_ell[i][j]
+    #            list_wavelets.append(remainder)
+                list_wavelets.append(remainder / len(self.angles))
+    #            list_wavelets.append( remainder / np.linalg.norm(remainder) * np.linalg.norm(list_wavelets[-1]) )
+            
+            remainder = len(self.angles) * filtered_circ[-1]
             for j in range(len(self.angles)):
-                list_wavelets.append(filtered_ell[i][j]-filtered_circ[i+1])
-                remainder -= filtered_ell[i][j]
-#            list_wavelets.append(remainder)
-            list_wavelets.append(remainder / len(self.angles))
-#            list_wavelets.append( remainder / np.linalg.norm(remainder) * np.linalg.norm(list_wavelets[-1]) )
-        
-        remainder = len(self.angles) * filtered_circ[-1]
-        for j in range(len(self.angles)):
-            list_wavelets.append(filtered_ell[-1][j])
-            remainder -= filtered_ell[-1][j]
-#        list_wavelets.append(remainder)
-#        list_wavelets.append(remainder / len(self.angles))
-        list_wavelets.append( filtered_circ[-1] )
+                list_wavelets.append(filtered_ell[-1][j])
+                remainder -= filtered_ell[-1][j]
+    #        list_wavelets.append(remainder)
+    #        list_wavelets.append(remainder / len(self.angles))
+            list_wavelets.append( filtered_circ[-1] )
         
         return list_wavelets
 

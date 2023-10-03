@@ -1,7 +1,6 @@
 from imagingbase.solvers.wavelet_clean import DOGCLEAN, BesselCLEAN, HybridCLEAN
 from imagingbase.solvers.clean import CLEAN as HCLEAN
-from imagingbase.regpy_utils import Convolution
-from imagingbase.regpy_utils import power as rgpower
+from regpy.operators import Convolution
 from imagingbase.operators.msi import DOGDictionary, BesselDictionary
 from regpy.discrs import Discretization
 from imagingbase.ehtim_wrapper import EhtimObsdata
@@ -111,7 +110,7 @@ class CLEAN:
         if self.transform == 'DoG':
             self.solver = DOGCLEAN(self.dmap.copy(), self.dbeam.copy(), self.psf, window, self.widths, num_cores=wrapper.num_cores, **self.args)
             grid = Discretization(self.dmap.shape)
-            domain = rgpower(grid, self.solver.length)
+            domain = grid**(self.solver.length)
             self.merger = DOGDictionary(domain, grid, self.widths, grid.shape, num_cores=wrapper.num_cores, **self.args)
             if self.solver.dog_trafo_clean.update_smoothing_scale:
                 self.merger.set_smoothing_scale(self.solver.dog_trafo_clean.smoothing_scale)
@@ -119,14 +118,14 @@ class CLEAN:
         if self.transform == 'Bessel':
             self.solver = BesselCLEAN(self.dmap.copy(), self.dbeam.copy(), self.psf, window, self.widths, num_cores=wrapper.num_cores, **self.args)
             grid = Discretization(self.dmap.shape)
-            domain = rgpower(grid, self.solver.length)
+            domain = grid**(self.solver.length)
             self.merger = BesselDictionary(domain, grid, self.widths, grid.shape, num_cores=wrapper.num_cores, **self.args)
             if self.solver.trafo_clean.update_smoothing_scale:
                 self.merger.set_smoothing_scale(self.solver.trafo_clean.smoothing_scale)
                 
         if self.transform == 'Hybrid':
             grid = Discretization(self.dmap.shape)
-            domain = rgpower(grid, len(widths))
+            domain = grid**(len(widths))
             self.log.info("Initialize merger ...")
             self.merger = BesselDictionary(domain, grid, self.widths, grid.shape, num_cores=wrapper.num_cores, **self.args)
             Builder = BuildMerger(self)
