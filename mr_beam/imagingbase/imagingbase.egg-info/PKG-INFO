@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: imagingbase
+Version: 0.1
+Requires-Python: >=3.6,<4.0
+Requires-Dist: numpy<2.0,>=1.14
+Requires-Dist: scipy<2.0,>=1.1
+Requires-Dist: regpy>=0.1

@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: regpy
+Version: 0.2
+Requires-Python: >=3.6,<4.0
+Requires-Dist: numpy<2.0,>=1.14
+Requires-Dist: scipy<2.0,>=1.1
+Provides-Extra: nfft
+Requires-Dist: pyNFFT<2.0,>=1.3; extra == "nfft"
