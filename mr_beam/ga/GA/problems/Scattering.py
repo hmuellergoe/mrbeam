@@ -2,116 +2,124 @@ import pygmo as pg
 import ehtim as eh
 import numpy as np
 
-from imagingbase.ehtim_wrapper import EhtimFunctional
-from imagingbase.ehtim_wrapper import EhtimWrapper, EmptyFunctional
+from imagingbase.ehtim_wrapper import EmptyFunctional
+from imagingbase.scattering_wrapper import ScatteringWrapper, ScatteringFunctional
 from regpy.discrs import Discretization
 from regpy.operators import Reshape
-
+from regpy.operators import Multiplication
 from joblib import Parallel, delayed
 
 class MyFunc():
-    def __init__(self, obs, prior, data_term, reg_term, ttype='direct', rescaling=0.02, zbl=1, dim=1, mode='pareto'):
+    def __init__(self, obs, prior, data_term, reg_term, ttype='direct', rescaling=[0.02, 0.02], zbl=1, dim=1, mode='pareto'):
         
-        domain = Discretization(prior.imarr().shape)
+        xdim, ydim = prior.imarr().shape
+        domain = Discretization(2 * xdim*ydim - 1)
         grid = Discretization(np.prod(domain.shape))
+        
+        factor = domain.ones()
+        print("TEXT")
+        #factor[prior.imarr().shape:] = rescaling[1]
+        #factor[0:prior.imarr().shape] = rescaling[0]
+        #factor[xdim:] = rescaling[1]
+        #factor[0:ydim] = rescaling[0]
+        
+        op = Multiplication(domain, factor)
         
         if data_term["vis"] == 0:
             self.func_vis = EmptyFunctional(domain)
         else:                
-            self.wrapper = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='vis', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False)
+            self.wrapper = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='vis', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
             
-            self.func_vis = EhtimFunctional(self.wrapper, domain)
+            self.func_vis = ScatteringFunctional(self.wrapper, domain)
             
         if data_term["cphase"] == 0:
             self.func_cph = EmptyFunctional(domain)
         else:                
-            self.wrapper_cph = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='cphase', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+            self.wrapper_cph = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                                d='cphase', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
             
-            self.func_cph = EhtimFunctional(self.wrapper_cph, domain)
+            self.func_cph = ScatteringFunctional(self.wrapper_cph, domain)
             
         if data_term["logcamp"] == 0:
             self.func_logcamp = EmptyFunctional(domain)
         else:                
-            self.wrapper_logcamp = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='logcamp', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+            self.wrapper_logcamp = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                                d='logcamp', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
             
-            self.func_logcamp = EhtimFunctional(self.wrapper_logcamp, domain)
+            self.func_logcamp = ScatteringFunctional(self.wrapper_logcamp, domain)
             
         if data_term["amp"] == 0:
             self.func_amp = EmptyFunctional(domain)
         else:                
-            self.wrapper_amp = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='amp', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+            self.wrapper_amp = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                                d='amp', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
             
-            self.func_amp = EhtimFunctional(self.wrapper_amp, domain)
+            self.func_amp = ScatteringFunctional(self.wrapper_amp, domain)
+        
+        self.wrapper_epsilon = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                                d='epsilon', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
+            
+        self.func_epsilon = ScatteringFunctional(self.wrapper_epsilon, domain)
         
         self.data_fidelity_term = data_term['vis'] * self.func_vis \
                                     + data_term['amp'] * self.func_amp \
                                     + data_term['cphase'] * self.func_cph \
-                                    + data_term['logcamp'] * self.func_logcamp
+                                    + data_term['logcamp'] * self.func_logcamp \
+                                    + data_term['epsilon'] * self.func_epsilon
                                     
-        self.data_fidelity_term = self.data_fidelity_term * Reshape(grid, domain)
+        self.data_fidelity_term = self.data_fidelity_term * op
         
-        self.wrapper_l1 = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='l1w', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False)
+        self.wrapper_l1 = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='l1w', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
 
-        self.wrapper_simple = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='simple', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False)
+        self.wrapper_simple = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='simple', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
         
-        self.wrapper_tv = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='tv', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False, epsilon_tv=0.001)
+        self.wrapper_tv = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='tv', maxit=100, ttype=ttype, clipfloor=-100, debias=False, epsilon_tv=0.001)
         
-        self.wrapper_tvs = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='tv2', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False)
+        self.wrapper_tvs = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='tv2', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
                 
-        self.wrapper_l2 = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='lA', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False)
+        self.wrapper_l2 = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='lA', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
         
-        self.wrapper_flux = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                            d='flux', maxit=100, ttype=ttype, clipfloor=-100,
-                            rescaling=rescaling, debias=False)
+        self.wrapper_flux = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                            d='flux', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
         
-        self.func_l1 = EhtimFunctional(self.wrapper_l1, domain)
-        self.func_simple = EhtimFunctional(self.wrapper_simple, domain)
-        self.func_tv = EhtimFunctional(self.wrapper_tv, domain)
-        self.func_tvs = EhtimFunctional(self.wrapper_tvs, domain)
-        self.func_l2 = EhtimFunctional(self.wrapper_l2, domain)
-        self.func_flux = EhtimFunctional(self.wrapper_flux, domain)
+        
+        self.func_l1 = ScatteringFunctional(self.wrapper_l1, domain)
+        self.func_simple = ScatteringFunctional(self.wrapper_simple, domain)
+        self.func_tv = ScatteringFunctional(self.wrapper_tv, domain)
+        self.func_tvs = ScatteringFunctional(self.wrapper_tvs, domain)
+        self.func_l2 = ScatteringFunctional(self.wrapper_l2, domain)
+        self.func_flux = ScatteringFunctional(self.wrapper_flux, domain)
         
         self.penalty_term = reg_term['l1w'] * self.func_l1
                             
-        self.penalty_term = self.penalty_term * Reshape(grid, domain)
+        self.penalty_term = self.penalty_term * op
 
         self.penalty_term2 = reg_term['tv'] * self.func_tv
                             
-        self.penalty_term2 = self.penalty_term2 * Reshape(grid, domain)
+        self.penalty_term2 = self.penalty_term2 * op
         
         self.penalty_term3 = reg_term['tv2'] * self.func_tvs
                             
-        self.penalty_term3 = self.penalty_term3 * Reshape(grid, domain)
+        self.penalty_term3 = self.penalty_term3 * op
         
         self.penalty_term4 = reg_term['lA'] * self.func_l2
                             
-        self.penalty_term4 = self.penalty_term4 * Reshape(grid, domain)
+        self.penalty_term4 = self.penalty_term4 * op
         
         self.penalty_term5 = reg_term['flux'] * self.func_flux
                             
-        self.penalty_term5 = self.penalty_term5 * Reshape(grid, domain)
+        self.penalty_term5 = self.penalty_term5 * op
         
         self.penalty_term6 = reg_term['simple'] * self.func_flux
                             
-        self.penalty_term6 = self.penalty_term6 * Reshape(grid, domain)
+        self.penalty_term6 = self.penalty_term6 * op
+        
         
         if mode == 'pareto':
             self.ob1 = self.data_fidelity_term + self.penalty_term
@@ -136,7 +144,7 @@ class MyFunc():
             raise NotImplementedError
            
 
-class EHT:
+class Scattering:
     """
     A multi-objective problem.
     (This is actually a Python implementation of 2-dimensional ZDT-1 problem)
@@ -149,7 +157,8 @@ class EHT:
         self.prior = prior
         self.data_term = data_term
         self.reg_term = reg_term
-        self.rescaling = rescaling
+        self.rescaling = rescaling[0]
+        self.rescaling_scattering = rescaling[1]
         self.zbl = zbl
         self.dim = dim
         self.mode = mode
@@ -189,4 +198,4 @@ class EHT:
 
     # Return function name
     def get_name(self):
-        return "simple polynomial example"
+        return "Scattering"

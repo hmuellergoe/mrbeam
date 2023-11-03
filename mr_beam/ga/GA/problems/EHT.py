@@ -189,4 +189,4 @@ class EHT:
 
     # Return function name
     def get_name(self):
-        return "simple polynomial example"
+        return "EHT"

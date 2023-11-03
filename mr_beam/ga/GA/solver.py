@@ -51,6 +51,9 @@ def read_config_params(file, probl):
         dictionary['pop_size'] = calculate_pop_size_4(dictionary['grid_size'])
     if probl == 'Full_Stokes':
         dictionary['pop_size'] = calculate_pop_size_5(dictionary['grid_size'])
+        
+    if ('mode' in dictionary) == False:
+        dictionary['mode'] = 'pareto'
             
     return dictionary
         
@@ -61,7 +64,6 @@ def solve(**kwargs):
     print (probl)
     
     config = kwargs.get('config')
-    
     
     if probl == 'EHT':
         
@@ -103,7 +105,7 @@ def solve(**kwargs):
         prior = prior.add_gauss(zbl, (prior_fwhm, prior_fwhm, 0, 0, 0))
         
         num_cores = dictionary['num_cores']
-        EHTfit = EHT.EHT(obs, prior, data_term, reg_term, rescaling, zbl, npix*npix, num_cores=num_cores)
+        EHTfit = EHT.EHT(obs, prior, data_term, reg_term, rescaling, zbl, npix*npix, num_cores=num_cores, mode=dictionary['mode'])
         EHTfit.setFit()
         
         #prior = EHTfit.wrapper.Obsdata.dirtyimage(npix, fov).imarr()
@@ -158,7 +160,7 @@ def solve(**kwargs):
         prior = prior.add_gauss(zbl, (prior_fwhm, prior_fwhm, 0, 0, 0))
         
         num_cores = dictionary['num_cores']
-        Moviefit = Movie.Movie(obs, prior, data_term, reg_term, rescaling, zbl, npix*npix, num_cores=num_cores, C=C, tau=tau)
+        Moviefit = Movie.Movie(obs, prior, data_term, reg_term, rescaling, zbl, npix*npix, num_cores=num_cores, C=C, tau=tau, mode=dictionary['mode'])
         Moviefit.setFit()
         
         #prior = EHTfit.wrapper.Obsdata.dirtyimage(npix, fov).imarr()
@@ -216,7 +218,7 @@ def solve(**kwargs):
         prior = img.copy()
         
         num_cores = dictionary['num_cores']
-        Polfit = Pol.Pol(obs, prior, data_term, reg_term, rescaling, zbl, 2*npix*npix, num_cores=num_cores, pcut=pcut)
+        Polfit = Pol.Pol(obs, prior, data_term, reg_term, rescaling, zbl, 2*npix*npix, num_cores=num_cores, pcut=pcut, mode=dictionary['mode'])
         Polfit.setFit()
         
         #prior = EHTfit.wrapper.Obsdata.dirtyimage(npix, fov).imarr()
@@ -274,7 +276,7 @@ def solve(**kwargs):
         prior = img.copy()
         
         num_cores = dictionary['num_cores']
-        Polfit = Full_Stokes.FullStokes(obs, prior, data_term, reg_term, rescaling, zbl, 3*npix*npix, num_cores=num_cores, pcut=pcut, rescalingV=dictionary['rescalingV'])
+        Polfit = Full_Stokes.FullStokes(obs, prior, data_term, reg_term, rescaling, zbl, 3*npix*npix, num_cores=num_cores, pcut=pcut, rescalingV=dictionary['rescalingV'], mode=dictionary['mode'])
         Polfit.setFit()
         
         #prior = EHTfit.wrapper.Obsdata.dirtyimage(npix, fov).imarr()

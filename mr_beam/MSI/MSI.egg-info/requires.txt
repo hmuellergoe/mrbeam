@@ -1,4 +1,0 @@
-numpy<2.0,>=1.14
-scipy<2.0,>=1.1
-matplotlib
-lightwise

@@ -6,7 +6,7 @@ from imagingbase.ehtim_wrapper import EhtimFunctional, EhtimWrapper
 from imagingbase.ehtim_wrapper_pol import EhtimWrapperPol
 from imagingbase.polimaging import PolImager
 from regpy.discrs import Discretization
-from regpy.operators import Reshape, CoordinateMask, CoordinateProjection, Shifted, Multiplication
+from regpy.operators import Reshape, CoordinateMask, CoordinateProjection, Shifted, Multiplication, DirectSum
 
 from joblib import Parallel, delayed
 
@@ -146,6 +146,7 @@ class MyFunc():
         self.wrapper_hw.updateobs(obs)
         self.wrapper_ptv.updateobs(obs) 
         self.wrapperV.updateobs(obs)
+        
 
 from regpy.functionals import Functional
 class HWFunctional(Functional):
@@ -256,7 +257,7 @@ class FullStokes:
 
     # Return function name
     def get_name(self):
-        return "simple polynomial example"
+        return "FullStokes"
 
 
 

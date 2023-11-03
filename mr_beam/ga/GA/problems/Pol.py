@@ -115,7 +115,16 @@ class MyFunc():
         self.wrapper.updateobs(obs)
         self.wrapper_msimple.updateobs(obs)
         self.wrapper_hw.updateobs(obs)
-        self.wrapper_ptv.updateobs(obs)        
+        self.wrapper_ptv.updateobs(obs)
+
+    def add_wavelets(self, wop):
+        mask = np.ones((3, self.wrapper.Prior.xdim**2), dtype=bool)
+        mask[0] = False
+        self.ob1 = self.ob1 * CoordinateProjection(self.func_pvis.domain, mask) * wop
+        self.ob2 = self.ob2 * CoordinateProjection(self.func_pvis.domain, mask) * wop
+        self.ob3 = self.ob3 * CoordinateProjection(self.func_pvis.domain, mask) * wop
+        self.ob4 = self.ob4 * CoordinateProjection(self.func_pvis.domain, mask) * wop
+        return        
         
 
 class Pol:
@@ -180,7 +189,7 @@ class Pol:
 
     # Return function name
     def get_name(self):
-        return "simple polynomial example"
+        return "Polarization"
 
 
 
