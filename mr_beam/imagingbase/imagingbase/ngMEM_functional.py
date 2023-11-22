@@ -59,7 +59,7 @@ class TemporalEntropy(Functional):
                 self.imvecdiff[:,i,j] = np.abs(_imvecs[i].flatten()-_imvecs[j].flatten())
                 
         return np.sum(np.exp(-self.tdiff**2/(2*self.tau**2))*(np.log(self.imvecdiff+self.C)+self.imvecdiff/(self.imvecdiff+self.C)), axis=1).flatten() \
-                    + np.sum(np.exp(self.tdiff**2/(2*self.tau**2))*(np.log(self.imvecdiff+self.C)+self.imvecdiff/(self.imvecdiff+self.C)), axis=2).flatten()
+                    + np.sum(np.exp(-self.tdiff**2/(2*self.tau**2))*(np.log(self.imvecdiff+self.C)+self.imvecdiff/(self.imvecdiff+self.C)), axis=2).flatten()
     
     
     

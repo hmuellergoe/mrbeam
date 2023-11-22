@@ -14,7 +14,7 @@ import ehtim.const_def as ehc
 def construct_cl_trace(rrvis1, rlvis1, lrvis1, llvis1, rrvis2, rlvis2, lrvis2, llvis2, rrvis3, rlvis3, lrvis3, llvis3, rrvis4, rlvis4, lrvis4, llvis4):
     #non conjugate version       
     vismatrix1 = np.asarray([[rrvis1, rlvis1],[lrvis1, llvis1]])
-    vismatrix2 = np.asarray([[rrvis4, rlvis4],[lrvis4, llvis4]]).conjugate()
+    vismatrix2 = np.asarray([[rrvis4, lrvis4],[rlvis4, llvis4]]).conjugate()
     vismatrix3 = np.asarray([[rrvis2, rlvis2],[lrvis2, llvis2]])
     vismatrix4 = np.asarray([[rrvis3, rlvis3],[lrvis3, llvis3]])
     
@@ -29,7 +29,7 @@ def construct_cl_trace(rrvis1, rlvis1, lrvis1, llvis1, rrvis2, rlvis2, lrvis2, l
     ###########################################################################
     #non conjugate version       
     vismatrix1 = np.asarray([[rrvis1, rlvis1],[lrvis1, llvis1]])
-    vismatrix2 = np.asarray([[rrvis4, rlvis4],[lrvis4, llvis4]]).conjugate()
+    vismatrix2 = np.asarray([[rrvis4, lrvis4],[rlvis4, llvis4]]).conjugate()
     vismatrix3 = np.asarray([[rrvis3, rlvis3],[lrvis3, llvis3]])
     vismatrix4 = np.asarray([[rrvis2, rlvis2],[lrvis2, llvis2]])
     
@@ -45,7 +45,7 @@ def construct_cl_trace(rrvis1, rlvis1, lrvis1, llvis1, rrvis2, rlvis2, lrvis2, l
     #non conjugate version       
     vismatrix1 = np.asarray([[rrvis1, rlvis1],[lrvis1, llvis1]])
     vismatrix2 = np.asarray([[rrvis2, rlvis2],[lrvis2, llvis2]])
-    vismatrix3 = np.asarray([[rrvis4, rlvis4],[lrvis4, llvis4]]).conjugate()
+    vismatrix3 = np.asarray([[rrvis4, lrvis4],[rlvis4, llvis4]]).conjugate()
     vismatrix4 = np.asarray([[rrvis3, rlvis3],[lrvis3, llvis3]])
     
     final_matrix1 = np.transpose(vismatrix1, axes=[2,0,1])
@@ -61,7 +61,7 @@ def construct_cl_trace(rrvis1, rlvis1, lrvis1, llvis1, rrvis2, rlvis2, lrvis2, l
     vismatrix1 = np.asarray([[rrvis1, rlvis1],[lrvis1, llvis1]])
     vismatrix2 = np.asarray([[rrvis2, rlvis2],[lrvis2, llvis2]])
     vismatrix3 = np.asarray([[rrvis3, rlvis3],[lrvis3, llvis3]])
-    vismatrix4 = np.asarray([[rrvis4, rlvis4],[lrvis4, llvis4]]).conjugate()
+    vismatrix4 = np.asarray([[rrvis4, lrvis4],[rlvis4, llvis4]]).conjugate()
     
     final_matrix1 = np.transpose(vismatrix1, axes=[2,0,1])
     final_matrix2 = np.linalg.inv(np.transpose(vismatrix2, axes=[2,0,1]))
@@ -75,7 +75,7 @@ def construct_cl_trace(rrvis1, rlvis1, lrvis1, llvis1, rrvis2, rlvis2, lrvis2, l
     #non conjugate version       
     vismatrix1 = np.asarray([[rrvis1, rlvis1],[lrvis1, llvis1]])
     vismatrix2 = np.asarray([[rrvis3, rlvis3],[lrvis3, llvis3]])
-    vismatrix3 = np.asarray([[rrvis4, rlvis4],[lrvis4, llvis4]]).conjugate()
+    vismatrix3 = np.asarray([[rrvis4, lrvis4],[rlvis4, llvis4]]).conjugate()
     vismatrix4 = np.asarray([[rrvis2, rlvis2],[lrvis2, llvis2]])
     
     final_matrix1 = np.transpose(vismatrix1, axes=[2,0,1])
@@ -91,7 +91,7 @@ def construct_cl_trace(rrvis1, rlvis1, lrvis1, llvis1, rrvis2, rlvis2, lrvis2, l
     vismatrix1 = np.asarray([[rrvis1, rlvis1],[lrvis1, llvis1]])
     vismatrix2 = np.asarray([[rrvis3, rlvis3],[lrvis3, llvis3]])
     vismatrix3 = np.asarray([[rrvis2, rlvis2],[lrvis2, llvis2]])
-    vismatrix4 = np.asarray([[rrvis4, rlvis4],[lrvis4, llvis4]]).conjugate()
+    vismatrix4 = np.asarray([[rrvis4, lrvis4],[rlvis4, llvis4]]).conjugate()
     
     final_matrix1 = np.transpose(vismatrix1, axes=[2,0,1])
     final_matrix2 = np.linalg.inv(np.transpose(vismatrix2, axes=[2,0,1]))
@@ -486,17 +486,17 @@ class ClosureTracePol(Operator):
         vismatrix4 = np.asarray([[ self.A4[3] @ brightness_matrix[0,0], self.A4[3] @ brightness_matrix[0,1]], [self.A4[3] @ brightness_matrix[1,0], self.A4[3] @ brightness_matrix[1,1]]])
         
         if self.order == 'ABCD':
-            vismatrix2 = vismatrix2.conjugate()
+            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
         if self.order == 'ABDC':
-            vismatrix2 = vismatrix2.conjugate()
+            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
         if self.order == 'ACBD':
-            vismatrix3 = vismatrix3.conjugate()
+            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
         if self.order == 'ACDB':
-            vismatrix4 = vismatrix4.conjugate()
+            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
         if self.order == 'ADBC':
-            vismatrix3 = vismatrix3.conjugate()
+            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
         if self.order == 'ADCB':
-            vismatrix4 = vismatrix4.conjugate()
+            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
         
         self.final_matrix1 = np.transpose(vismatrix1, axes=[2,0,1])
         self.final_matrix2 = np.linalg.inv(np.transpose(vismatrix2, axes=[2,0,1]))
@@ -520,17 +520,17 @@ class ClosureTracePol(Operator):
         vismatrix4 = np.asarray([[ self.A4[3] @ brightness_matrix[0,0], self.A4[3] @ brightness_matrix[0,1]], [self.A4[3] @ brightness_matrix[1,0], self.A4[3] @ brightness_matrix[1,1]]])
     
         if self.order == 'ABCD':
-            vismatrix2 = vismatrix2.conjugate()
+            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
         if self.order == 'ABDC':
-            vismatrix2 = vismatrix2.conjugate()
+            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
         if self.order == 'ACBD':
-            vismatrix3 = vismatrix3.conjugate()
+            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
         if self.order == 'ACDB':
-            vismatrix4 = vismatrix4.conjugate()
+            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
         if self.order == 'ADBC':
-            vismatrix3 = vismatrix3.conjugate()
+            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
         if self.order == 'ADCB':
-            vismatrix4 = vismatrix4.conjugate()
+            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
     
         final_matrix1h = np.transpose(vismatrix1, axes=[2,0,1])
         final_matrix2h = np.transpose(vismatrix2, axes=[2,0,1])
@@ -563,17 +563,17 @@ class ClosureTracePol(Operator):
         A4 = np.conjugate(np.asarray(self.A4))
         
         if self.order == 'ABCD':
-            vismatrix2 = vismatrix2.conjugate()
+            vismatrix2 = np.transpose(vismatrix2, axes=[0,2,1]).conjugate()
         if self.order == 'ABDC':
-            vismatrix2 = vismatrix2.conjugate()
+            vismatrix2 = np.transpose(vismatrix2, axes=[0,2,1]).conjugate()
         if self.order == 'ACBD':
-            vismatrix3 = vismatrix3.conjugate()
+            vismatrix3 = np.transpose(vismatrix3, axes=[0,2,1]).conjugate()
         if self.order == 'ACDB':
-            vismatrix4 = vismatrix4.conjugate()
+            vismatrix4 = np.transpose(vismatrix4, axes=[0,2,1]).conjugate()
         if self.order == 'ADBC':
-            vismatrix3 = vismatrix3.conjugate()
+            vismatrix3 = np.transpose(vismatrix3, axes=[0,2,1]).conjugate()
         if self.order == 'ADCB':
-            vismatrix4 = vismatrix4.conjugate()
+            vismatrix4 = np.transpose(vismatrix4, axes=[0,2,1]).conjugate()
         
         brightness_matrix = np.zeros((2, 2, self.domain.shape[1]), dtype=complex)
         brightness_matrix[0,0] = A4[0].transpose() @ vismatrix1[:,0,0] \

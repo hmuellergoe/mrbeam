@@ -116,7 +116,7 @@ class MyFunc():
                             
         self.penalty_term5 = self.penalty_term5 * op
         
-        self.penalty_term6 = reg_term['simple'] * self.func_flux
+        self.penalty_term6 = reg_term['simple'] * self.func_simple
                             
         self.penalty_term6 = self.penalty_term6 * op
         

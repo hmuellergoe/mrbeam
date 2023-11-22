@@ -7,7 +7,7 @@ STRINGKEYS = ['img', 'uvf', 'decomposition_method', 'minimization_algorithm', 'm
 FLOATKEYS = ['rescaling', 'rescalingV', 'zbl', 'prior_fwhm', 'CR', 'F', 'eta_m', 'realb', 'blur_circ', 'C', 'tau', 'pcut', 'max_weight', 'snr']
 INTKEYS = ['grid_size', 'seed_initial', 'num_cores', 'generations', 'neighbours', 'decomposition_seed', 'limit']
 REGKEYS = ['l1w', 'simple', 'tv', 'tv2', 'lA', 'flux', 'ngmem', 'entr', 'msimple', 'hw', 'ptv']
-DATKEYS = ['vis', 'amp', 'cphase', 'logcamp', 'pvis']
+DATKEYS = ['vis', 'amp', 'cphase', 'logcamp', 'pvis', 'cltrace']
 BOOLKEYS = ['preserve_diversity', 'use_gradient','parallel']
 
 def calculate_pop_size_7(grid_size):
@@ -49,7 +49,7 @@ def read_config_params(file, probl):
         dictionary['pop_size'] = calculate_pop_size_7(dictionary['grid_size'])
     if probl == 'Pol':
         dictionary['pop_size'] = calculate_pop_size_4(dictionary['grid_size'])
-    if probl == 'Full_Stokes':
+    if probl == 'Full_Stokes' or probl == 'CLTrace':
         dictionary['pop_size'] = calculate_pop_size_5(dictionary['grid_size'])
         
     if ('mode' in dictionary) == False:
@@ -234,6 +234,64 @@ def solve(**kwargs):
         
         return [udp, Polfit, pop, dictionary]
     
+    if probl == 'CLTrace':
+        from GA.problems import CLTrace
+        
+        import ehtim as eh
+        
+        dictionary = read_config_params(config, probl)
+        
+        reg_term = dictionary['reg_term']
+        data_term = dictionary['data_term']
+           
+        rescaling = dictionary['rescaling']
+        zbl = dictionary['zbl']
+        
+        pcut = dictionary['pcut']
+
+        #Load true sky brightness distribution
+        img = eh.image.load_fits(dictionary['img'])
+        
+        #img = img.regrid_image(img.fovx(), 16)
+
+        target_im = img.imarr()
+        target_im = np.asarray(target_im, dtype=float)
+
+        #Load synthetic data 
+        obs = eh.obsdata.load_uvfits(dictionary['uvf'])
+
+        npix = img.xdim
+        fov = img.fovx()
+        
+        # regrid
+        #npix = 16
+        #img = img.regrid_image(img.fovx(), npix)
+        #fov = img.fovx()
+
+
+        #prior image, leave it blank for now
+        #prior = eh.image.make_square(obs, npix, fov)
+        #prior_fwhm = dictionary['prior_fwhm']*eh.RADPERUAS
+        #prior = prior.add_gauss(zbl, (prior_fwhm, prior_fwhm, 0, 0, 0))
+        prior = img.copy()
+        
+        num_cores = dictionary['num_cores']
+        Polfit = CLTrace.CLTrace(obs, prior, data_term, reg_term, rescaling, zbl, 2*npix*npix, num_cores=num_cores, pcut=pcut, mode=dictionary['mode'])
+        Polfit.setFit()
+        
+        #prior = EHTfit.wrapper.Obsdata.dirtyimage(npix, fov).imarr()
+        
+        udp = pg.problem(Polfit)
+        
+        pop_size = dictionary['pop_size']
+        seed = dictionary['seed_initial']
+        pop = pg.population(udp, size=pop_size, seed=seed)
+        
+#        for i in range(pop_size):
+#            pop.set_x(i,prior.imarr().flatten())
+        
+        return [udp, Polfit, pop, dictionary]
+    
     if probl == 'Full_Stokes':
         from GA.problems import Full_Stokes
         
@@ -294,7 +352,7 @@ def solve(**kwargs):
         
     else:
         
-        from ga.problems import Entropy, Polynomial
+        from GA.problems import Entropy, Polynomial
         
         dim = kwargs.pop('dim')
         print(dim, '%s.%s(%i)'%(probl,probl,dim))
