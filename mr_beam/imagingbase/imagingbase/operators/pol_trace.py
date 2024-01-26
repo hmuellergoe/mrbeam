@@ -340,15 +340,14 @@ def build_cltrace_operator(wrapper, timetype=False, errors=True):
  
     if errors:
         cltraces = []
-        seeds = np.arange(1, 11)
-        l = len(wrapper.Obsdata.data)
+        rng = np.random.default_rng(seed=12)
+        l = len(obs.data)
         for i in range(10):
-            obs_noise = wrapper.Obsdata.copy().switch_polrep(polrep_out='circ')
-            np.random.seed = seeds[i]
-            obs_noise.data['rrvis'] += obs_noise.data['rrsigma']*(np.random.normal(0.0, 1.0, l)+((1j))*np.random.normal(0.0, 1.0, l))
-            obs_noise.data['rlvis'] += obs_noise.data['rlsigma']*(np.random.normal(0.0, 1.0, l)+((1j))*np.random.normal(0.0, 1.0, l))
-            obs_noise.data['lrvis'] += obs_noise.data['lrsigma']*(np.random.normal(0.0, 1.0, l)+((1j))*np.random.normal(0.0, 1.0, l))
-            obs_noise.data['llvis'] += obs_noise.data['llsigma']*(np.random.normal(0.0, 1.0, l)+((1j))*np.random.normal(0.0, 1.0, l))
+            obs_noise = obs.copy().switch_polrep(polrep_out='circ')
+            obs_noise.data['rrvis'] += obs_noise.data['rrsigma']*(rng.normal(0.0, 1.0, l)+((1j))*rng.normal(0.0, 1.0, l))
+            obs_noise.data['rlvis'] += obs_noise.data['rlsigma']*(rng.normal(0.0, 1.0, l)+((1j))*rng.normal(0.0, 1.0, l))
+            obs_noise.data['lrvis'] += obs_noise.data['lrsigma']*(rng.normal(0.0, 1.0, l)+((1j))*rng.normal(0.0, 1.0, l))
+            obs_noise.data['llvis'] += obs_noise.data['llsigma']*(rng.normal(0.0, 1.0, l)+((1j))*rng.normal(0.0, 1.0, l))
             clamparr = find_quad_array(obs_noise, timetype=timetype)
             
             rrvis1n = clamparr['f13']
@@ -426,8 +425,9 @@ class Makecopies(Operator):
         return np.mean(np.asarray(toret), axis=0)
 
 class ClosureTracePol(Operator):
-    def __init__(self, A4, order='ABCD'):
+    def __init__(self, A4, order='ABCD', transpose=True):
         self.order = order
+        self.transpose = transpose
         #self.conj = conj
         #self.wrapper = wrapper
         #domain = Discretization(self.wrapper.xtuple.shape)
@@ -485,18 +485,19 @@ class ClosureTracePol(Operator):
         vismatrix3 = np.asarray([[ self.A4[2] @ brightness_matrix[0,0], self.A4[2] @ brightness_matrix[0,1]], [self.A4[2] @ brightness_matrix[1,0], self.A4[2] @ brightness_matrix[1,1]]])
         vismatrix4 = np.asarray([[ self.A4[3] @ brightness_matrix[0,0], self.A4[3] @ brightness_matrix[0,1]], [self.A4[3] @ brightness_matrix[1,0], self.A4[3] @ brightness_matrix[1,1]]])
         
-        if self.order == 'ABCD':
-            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
-        if self.order == 'ABDC':
-            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
-        if self.order == 'ACBD':
-            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
-        if self.order == 'ACDB':
-            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
-        if self.order == 'ADBC':
-            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
-        if self.order == 'ADCB':
-            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
+        if self.transpose:
+            if self.order == 'ABCD':
+                vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
+            if self.order == 'ABDC':
+                vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
+            if self.order == 'ACBD':
+                vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
+            if self.order == 'ACDB':
+                vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
+            if self.order == 'ADBC':
+                vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
+            if self.order == 'ADCB':
+                vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
         
         self.final_matrix1 = np.transpose(vismatrix1, axes=[2,0,1])
         self.final_matrix2 = np.linalg.inv(np.transpose(vismatrix2, axes=[2,0,1]))
@@ -519,18 +520,19 @@ class ClosureTracePol(Operator):
         vismatrix3 = np.asarray([[ self.A4[2] @ brightness_matrix[0,0], self.A4[2] @ brightness_matrix[0,1]], [self.A4[2] @ brightness_matrix[1,0], self.A4[2] @ brightness_matrix[1,1]]])
         vismatrix4 = np.asarray([[ self.A4[3] @ brightness_matrix[0,0], self.A4[3] @ brightness_matrix[0,1]], [self.A4[3] @ brightness_matrix[1,0], self.A4[3] @ brightness_matrix[1,1]]])
     
-        if self.order == 'ABCD':
-            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
-        if self.order == 'ABDC':
-            vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
-        if self.order == 'ACBD':
-            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
-        if self.order == 'ACDB':
-            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
-        if self.order == 'ADBC':
-            vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
-        if self.order == 'ADCB':
-            vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
+        if self.transpose:
+            if self.order == 'ABCD':
+                vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
+            if self.order == 'ABDC':
+                vismatrix2 = np.transpose(vismatrix2, axes=[1,0,2]).conjugate()
+            if self.order == 'ACBD':
+                vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
+            if self.order == 'ACDB':
+                vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
+            if self.order == 'ADBC':
+                vismatrix3 = np.transpose(vismatrix3, axes=[1,0,2]).conjugate()
+            if self.order == 'ADCB':
+                vismatrix4 = np.transpose(vismatrix4, axes=[1,0,2]).conjugate()
     
         final_matrix1h = np.transpose(vismatrix1, axes=[2,0,1])
         final_matrix2h = np.transpose(vismatrix2, axes=[2,0,1])
@@ -562,18 +564,19 @@ class ClosureTracePol(Operator):
            
         A4 = np.conjugate(np.asarray(self.A4))
         
-        if self.order == 'ABCD':
-            vismatrix2 = np.transpose(vismatrix2, axes=[0,2,1]).conjugate()
-        if self.order == 'ABDC':
-            vismatrix2 = np.transpose(vismatrix2, axes=[0,2,1]).conjugate()
-        if self.order == 'ACBD':
-            vismatrix3 = np.transpose(vismatrix3, axes=[0,2,1]).conjugate()
-        if self.order == 'ACDB':
-            vismatrix4 = np.transpose(vismatrix4, axes=[0,2,1]).conjugate()
-        if self.order == 'ADBC':
-            vismatrix3 = np.transpose(vismatrix3, axes=[0,2,1]).conjugate()
-        if self.order == 'ADCB':
-            vismatrix4 = np.transpose(vismatrix4, axes=[0,2,1]).conjugate()
+        if self.transpose:
+            if self.order == 'ABCD':
+                vismatrix2 = np.transpose(vismatrix2, axes=[0,2,1]).conjugate()
+            if self.order == 'ABDC':
+                vismatrix2 = np.transpose(vismatrix2, axes=[0,2,1]).conjugate()
+            if self.order == 'ACBD':
+                vismatrix3 = np.transpose(vismatrix3, axes=[0,2,1]).conjugate()
+            if self.order == 'ACDB':
+                vismatrix4 = np.transpose(vismatrix4, axes=[0,2,1]).conjugate()
+            if self.order == 'ADBC':
+                vismatrix3 = np.transpose(vismatrix3, axes=[0,2,1]).conjugate()
+            if self.order == 'ADCB':
+                vismatrix4 = np.transpose(vismatrix4, axes=[0,2,1]).conjugate()
         
         brightness_matrix = np.zeros((2, 2, self.domain.shape[1]), dtype=complex)
         brightness_matrix[0,0] = A4[0].transpose() @ vismatrix1[:,0,0] \
