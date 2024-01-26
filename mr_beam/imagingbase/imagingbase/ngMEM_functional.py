@@ -12,7 +12,7 @@ class MovieEntropy(Functional):
         for i in range(self.nr_of_frames):
             img = self.handler.formatoutput(prior_movie[i])
             self.handlers.append(EhtimWrapper(self.handler.Obsdata, img, img, img.total_flux(),
-                                              d='simple', ttype=self.handler.ttype))
+                                              d='simple', ttype=self.handler.ttype, clipfloor=self.handler.clipfloor))
             self.functionals.append(EhtimFunctional(self.handlers[i], domain))
         super().__init__(domain**self.nr_of_frames)
     
@@ -27,7 +27,7 @@ class MovieEntropy(Functional):
         _imvecs = self.domain.split(imvecs)
         toret = 0
         for i in range(self.nr_of_frames):
-            toret += self.handlers[i].gradient(_imvecs[i])
+            toret += self.functionals[i].gradient(_imvecs[i])
         return toret
     
 class TemporalEntropy(Functional):
