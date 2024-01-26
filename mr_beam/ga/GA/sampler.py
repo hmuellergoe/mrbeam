@@ -1,7 +1,8 @@
 import numpy as np
 
 class Sampler:
-    def __init__(self, points, threshold):
+    def __init__(self, points, threshold, mode='pareto'):
+        self.mode = mode
         self.seen = set()
         self.neighbors = []
         self.adj = []
@@ -18,9 +19,13 @@ class Sampler:
 
     def find_points(self, fits):
         self.points = np.zeros((fits.shape[2], fits.shape[1]))
-        for i in range(self.points.shape[0]-1):
-            self.points[i] = fits[0, :, i]-fits[0, :, -1]
-        self.points[-1] = fits[0,:,-1]
+        if self.mode == 'pareto':
+            for i in range(self.points.shape[0]-1):
+                self.points[i] = fits[0, :, i]-fits[0, :, -1]
+            self.points[-1] = fits[0,:,-1]
+        else:
+            for i in range(self.points.shape[0]):
+                self.points[i] = fits[0, :, i]
         
         #Rescale
         for i in range(len(self.points)):
