@@ -134,6 +134,32 @@ class MyFunc():
         else:
             print('mode not implemented')
             raise NotImplementedError
+            
+    def update_obs(self, obs):
+        #the functionals have the same instance, no copies, so changing wrapper changes all functionals
+        try:
+            self.wrapper.updateobs(obs)
+        except:
+            pass
+        try:
+            self.wrapper_cph.updateobs(obs)
+        except:
+            pass
+        try:
+            self.wrapper_logcamp.updateobs(obs)
+        except:
+            pass
+        try:
+            self.wrapper_amp.updateobs(obs)
+        except:
+            pass
+        
+        self.wrapper_l1.updateobs(obs)
+        self.wrapper_simple.updateobs(obs)
+        self.wrapper_tv.updateobs(obs)
+        self.wrapper_tvs.updateobs(obs)
+        self.wrapper_l2.updateobs(obs)
+        self.wrapper_flux.updateobs(obs)
            
 
 class EHT:

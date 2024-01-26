@@ -47,7 +47,7 @@ class MyFunc():
                             d='pvis', maxit=100, ttype=ttype, clipfloor=-100,
                             rescaling=rescaling, debias=False, pol_solve=(1,1,1), pol_trans=False)
 
-        self.cltrace = build_cltrace_operator(self.wrapper_clt, errors=False)
+        self.cltrace = build_cltrace_operator(self.wrapper_clt, errors=True)
         self.m2q = mchi2qu(self.op.codomain)
         self.cltrace_weight = data_term['cltrace']
         self.cltrace = self.cltrace_weight * self.cltrace * self.m2q * self.op
@@ -130,7 +130,7 @@ class MyFunc():
         self.wrapper_msimple.updateobs(obs)
         self.wrapper_hw.updateobs(obs)
         self.wrapper_ptv.updateobs(obs)
-        self.cltrace = self.cltrace_weight * build_cltrace_operator(self.wrapper, errors=False) * self.m2q * self.op
+        self.cltrace = self.cltrace_weight * build_cltrace_operator(self.wrapper, errors=True) * self.m2q * self.op
 
     def add_wavelets(self, wop):
         mask = np.ones((3, self.wrapper.Prior.xdim**2), dtype=bool)
