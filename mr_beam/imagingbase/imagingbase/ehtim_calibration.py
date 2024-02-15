@@ -29,7 +29,7 @@ class Calibrator:
         self.obs = self.avg_coherent(0, scan_avg=True, err_type=self.err_type)
 
         # Estimate the total flux density from the zero baseline
-        zbl_tot   = np.median(self.obs.unpack_bl(self.zero_baseline_a1,self.zero_baseline_a2,'amp'))[1]#['amp'])
+        zbl_tot   = np.median(np.asarray(self.obs.unpack_bl(self.zero_baseline_a1,self.zero_baseline_a2,'amp'), dtype=np.dtype('float,float'))['f1'])#['amp'])
         if self.zbl > zbl_tot:
             print('Warning: Specified total compact flux density ' +
                   'exceeds total flux density')
