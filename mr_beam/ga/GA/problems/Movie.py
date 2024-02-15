@@ -2,7 +2,7 @@ import pygmo as pg
 import ehtim as eh
 import numpy as np
 
-from imagingbase.ehtim_wrapper import EhtimFunctional
+from imagingbase.ehtim_wrapper import EhtimFunctional, EmptyFunctional
 from imagingbase.ehtim_wrapper import EhtimWrapper
 from imagingbase.ngMEM_functional import TemporalEntropy
 from regpy.discrs import Discretization
@@ -23,27 +23,36 @@ class MyFunc():
         func_logcamp = []
         func_amp = []
         
+        obs = obs_List[0]
+        
         for i in range(self.nr_of_frames):
-            wrapper = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='vis', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
-    
-            wrapper_cph = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                    d='vis', maxit=100, ttype=ttype, clipfloor=-100,
-                                    rescaling=rescaling, debias=False)
-            
-            wrapper_logcamp = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                    d='vis', maxit=100, ttype=ttype, clipfloor=-100,
-                                    rescaling=rescaling, debias=False)
-            
-            wrapper_amp = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+            if len(obs_List[i].data) > 0:
+                wrapper = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
                                     d='vis', maxit=100, ttype=ttype, clipfloor=-100,
                                     rescaling=rescaling, debias=False)
         
-            func_vis.append(EhtimFunctional(wrapper, domain))
-            func_cph.append(EhtimFunctional(wrapper_cph, domain))
-            func_logcamp.append(EhtimFunctional(wrapper_logcamp, domain))
-            func_amp.append(EhtimFunctional(wrapper_amp, domain))
+                wrapper_cph = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                        d='vis', maxit=100, ttype=ttype, clipfloor=-100,
+                                        rescaling=rescaling, debias=False)
+                
+                wrapper_logcamp = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                        d='vis', maxit=100, ttype=ttype, clipfloor=-100,
+                                        rescaling=rescaling, debias=False)
+                
+                wrapper_amp = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                        d='vis', maxit=100, ttype=ttype, clipfloor=-100,
+                                        rescaling=rescaling, debias=False)
+            
+                func_vis.append(EhtimFunctional(wrapper, domain))
+                func_cph.append(EhtimFunctional(wrapper_cph, domain))
+                func_logcamp.append(EhtimFunctional(wrapper_logcamp, domain))
+                func_amp.append(EhtimFunctional(wrapper_amp, domain))
+                obs = obs_List[i]
+            else:
+                func_vis.append(EmptyFunctional(domain))
+                func_cph.append(EmptyFunctional(domain))
+                func_logcamp.append(EmptyFunctional(domain))
+                func_amp.append(EmptyFunctional(domain))
             
         self.func_vis = FunctionalProductSpace(func_vis, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
         self.func_amp = FunctionalProductSpace(func_amp, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
@@ -65,37 +74,45 @@ class MyFunc():
         func_flux = []
         
         for i in range(self.nr_of_frames):
+            if len(obs_List[i].data) > 0:
+                wrapper_l1 = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                    d='l1w', maxit=100, ttype=ttype, clipfloor=-100,
+                                    rescaling=rescaling, debias=False)
         
-            wrapper_l1 = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='l1w', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
-    
-            wrapper_simple = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='simple', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+                wrapper_simple = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                    d='simple', maxit=100, ttype=ttype, clipfloor=-100,
+                                    rescaling=rescaling, debias=False)
+                
+                wrapper_tv = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                    d='tv', maxit=100, ttype=ttype, clipfloor=-100,
+                                    rescaling=rescaling, debias=False, epsilon_tv=0.0001)
+                
+                wrapper_tvs = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                    d='tv2', maxit=100, ttype=ttype, clipfloor=-100,
+                                    rescaling=rescaling, debias=False)
+                        
+                wrapper_l2 = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                    d='lA', maxit=100, ttype=ttype, clipfloor=-100,
+                                    rescaling=rescaling, debias=False)
+                
+                wrapper_flux = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
+                                    d='flux', maxit=100, ttype=ttype, clipfloor=-100,
+                                    rescaling=rescaling, debias=False)
             
-            wrapper_tv = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='tv', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False, epsilon_tv=0.0001)
-            
-            wrapper_tvs = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='tv2', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
-                    
-            wrapper_l2 = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='lA', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
-            
-            wrapper_flux = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
-                                d='flux', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
-        
-            func_l1.append(EhtimFunctional(wrapper_l1, domain))
-            func_simple.append(EhtimFunctional(wrapper_simple, domain))
-            func_tv.append(EhtimFunctional(wrapper_tv, domain))
-            func_tvs.append(EhtimFunctional(wrapper_tvs, domain))
-            func_l2.append(EhtimFunctional(wrapper_l2, domain))
-            func_flux.append(EhtimFunctional(wrapper_flux, domain))
+                func_l1.append(EhtimFunctional(wrapper_l1, domain))
+                func_simple.append(EhtimFunctional(wrapper_simple, domain))
+                func_tv.append(EhtimFunctional(wrapper_tv, domain))
+                func_tvs.append(EhtimFunctional(wrapper_tvs, domain))
+                func_l2.append(EhtimFunctional(wrapper_l2, domain))
+                func_flux.append(EhtimFunctional(wrapper_flux, domain))
+            else:
+                func_l1.append(EmptyFunctional(domain))
+                func_simple.append(EmptyFunctional(domain))
+                func_tv.append(EmptyFunctional(domain))
+                func_tvs.append(EmptyFunctional(domain))
+                func_l2.append(EmptyFunctional(domain))
+                func_flux.append(EmptyFunctional(domain))
+                
             
         self.func_l1 = FunctionalProductSpace(func_l1, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
         self.func_simple = FunctionalProductSpace(func_simple, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
@@ -159,8 +176,8 @@ class Movie:
         self.rescaling = rescaling
         self.zbls = zbls
         self.dim = dim
-        self.C = 1
-        self.tau = 1
+        self.C = C
+        self.tau = tau
         self.mode = mode
         
         self.num_cores = num_cores
