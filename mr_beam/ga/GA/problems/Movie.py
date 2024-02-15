@@ -76,7 +76,7 @@ class MyFunc():
             
             wrapper_tv = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
                                 d='tv', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+                                rescaling=rescaling, debias=False, epsilon_tv=0.0001)
             
             wrapper_tvs = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
                                 d='tv2', maxit=100, ttype=ttype, clipfloor=-100,
