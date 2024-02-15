@@ -261,7 +261,7 @@ def find_quad_array(obs, timetype=False):
 
             # Add the closure amplitudes to the equal-time list
             # Our site convention is (12)(34)/(14)(23)
-            dtype=np.dtype('float,str,str,str,str,float,float,float,float,float,float,float,float,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex')
+            dtype=np.dtype('float,U20,U20,U20,U20,float,float,float,float,float,float,float,float,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex,complex')
             cas.append(np.array((time,
                                  quad[0], quad[1], quad[2], quad[3],
                                  blue1['u'], blue1['v'], blue2['u'], blue2['v'],
