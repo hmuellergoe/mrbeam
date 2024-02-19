@@ -191,7 +191,7 @@ class HWFunctional(Functional):
         gradcm = self.handlerV.rescaling *gradm * (poltuple[2*self.handler.inittuple.shape[1]:] - 0.5)/ mimage
         out = (gradlm, gradchi, gradcm)
 
-        return np.array(out)/norm
+        return np.array(out).flatten()/norm
 
 
 class FullStokes:
