@@ -12,7 +12,7 @@ from regpy.functionals import FunctionalProductSpace
 from joblib import Parallel, delayed
 
 class MyFunc():
-    def __init__(self, obs_List, prior, data_term, reg_term, zbls, ttype='direct', rescaling=0.02, dim=1, C=1, tau=1, mode='pareto'):
+    def __init__(self, obs_List, prior, data_term, reg_term, zbls, ttype='direct', rescaling=0.02, dim=1, C=1, tau=1, mode='pareto', **kwargs):
         self.nr_of_frames = len(obs_List)
         
         domain = Discretization(prior.imarr().shape)
@@ -120,7 +120,7 @@ class MyFunc():
         self.func_tvs = FunctionalProductSpace(func_tvs, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
         self.func_l2 = FunctionalProductSpace(func_l2, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
         self.func_flux = FunctionalProductSpace(func_flux, domain**self.nr_of_frames, np.ones(self.nr_of_frames))
-        self.func_ngmem = TemporalEntropy(domain, self.nr_of_frames, C, tau)
+        self.func_ngmem = TemporalEntropy(domain, self.nr_of_frames, C, tau, **kwargs)
         
         self.penalty_term = reg_term['l1w'] * self.func_l1
                             
