@@ -11,6 +11,8 @@ import ehtim.observing.obs_helpers as obsh
 import ehtim.const_def as ehc
 import ehtim.scattering as so
 
+import itertools as it
+
 import ehtplot.color
 
 from joblib import Parallel, delayed
@@ -753,6 +755,48 @@ class EhtimObsdata(Obsdata):
             return {'kept': obs_kept, 'flagged': obs_flagged}
         else:
             return obs_kept    
+        
+    def tlist(self, conj=False, t_gather=0., scan_gather=False):
+        """Group the data in a list of equal time observation datatables.
+
+           Args:
+                conj (bool): True if tlist_out includes conjugate baselines.
+                t_gather (float): Grouping timescale (in seconds). 0.0 indicates no grouping.
+                scan_gather (bool): If true, gather data into scans
+
+           Returns:
+                (list): a list of data tables containing time-partitioned data
+        """
+
+        if conj:
+            data = self.data_conj()
+        else:
+            data = self.data
+
+        # partition the data by time
+        datalist = []
+
+        if t_gather <= 0.0 and not scan_gather:
+            # Only group measurements at the same time
+            for key, group in it.groupby(data, lambda x: x['time']):
+                datalist.append(np.array([obs for obs in group]))
+        elif t_gather > 0.0 and not scan_gather:
+            # Group measurements in time
+            for key, group in it.groupby(data, lambda x: int(x['time'] / (t_gather / 3600.0))):
+                datalist.append(np.array([obs for obs in group]))
+        else:
+            # Group measurements by scan
+            if ((self.scans is None) or 
+                 np.any([scan is None for scan in self.scans]) or
+                 len(self.scans) == 0):
+                print("No scan table in observation. Adding scan table before gathering...")
+                self.add_scans()
+
+            for key, group in it.groupby(
+                    data, lambda x: np.searchsorted(self.scans[:, 0], x['time'])):
+                datalist.append(np.array([obs for obs in group]))
+
+        return np.array(datalist)
             
             
             
