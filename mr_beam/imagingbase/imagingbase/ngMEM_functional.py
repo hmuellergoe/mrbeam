@@ -31,11 +31,12 @@ class MovieEntropy(Functional):
         return toret
     
 class TemporalEntropy(Functional):
-    def __init__(self, domain, nr_of_frames, C, tau):
+    def __init__(self, domain, nr_of_frames, C, tau, **kwargs):
         self.nr_of_frames = nr_of_frames
         self.C = C
         self.tau = tau
-        self.times = np.arange(self.nr_of_frames)
+        self.times = kwargs.get('times', np.arange(self.nr_of_frames))
+        assert len(self.times) == self.nr_of_frames
         
         self.tdiff = np.zeros((self.nr_of_frames, self.nr_of_frames))
         for i in range(self.nr_of_frames):
