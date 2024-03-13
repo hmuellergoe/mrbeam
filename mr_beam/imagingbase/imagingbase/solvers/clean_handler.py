@@ -204,7 +204,7 @@ class CLEAN:
         if gain == '':
             pass
         else:
-            self.solver.gain = np.float(gain)
+            self.solver.gain = float(gain)
             
         self.log.info("Specify window")
         limits = input()
@@ -291,7 +291,7 @@ class CLEAN:
             #self.solver.weights /= self.solver.maxs        
 
         gain = dict["gain"]
-        self.solver.gain = np.float(gain)
+        self.solver.gain = float(gain)
 
         limits = dict["limits"].copy()
         assert limits.dtype == int
@@ -1098,7 +1098,7 @@ class CLEAN:
 
         self.solver_hogbom.set_bounds_from_script(self.plotting_bounds)
         
-        self.solver_hogbom.solver.gain = np.float(gain) or self.solver.gain
+        self.solver_hogbom.solver.gain = float(gain) or self.solver.gain
         self.solver_hogbom.solver.window = self.solver.window.copy()
         self.solver_hogbom.solver.indices = np.arange(0, np.prod(self.solver_hogbom.dmap.shape))[self.solver_hogbom.solver.window]
         
