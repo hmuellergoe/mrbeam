@@ -796,7 +796,10 @@ class EhtimObsdata(Obsdata):
                     data, lambda x: np.searchsorted(self.scans[:, 0], x['time'])):
                 datalist.append(np.array([obs for obs in group]))
 
-        return np.array(datalist)
+        try:
+            return np.array(datalist)
+        except:
+            return np.array(datalist, dtype=object)
             
             
             

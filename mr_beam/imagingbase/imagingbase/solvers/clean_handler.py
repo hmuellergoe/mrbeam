@@ -714,7 +714,7 @@ class CLEAN:
         if interactive:
             ax.contour(to_plot[self.plotting_bounds[0]:self.plotting_bounds[1], self.plotting_bounds[2]:self.plotting_bounds[3]][::-1], levels=peak*self.levels, linewidths=1)
             self.RS_wind = RectangleSelector(ax, self._line_select_callback_wind,
-                                           drawtype='box', useblit=True,
+                                             useblit=True,
                                            button=[1, 3],  # disable middle button
                                            minspanx=5, minspany=5,
                                            spancoords='pixels',
