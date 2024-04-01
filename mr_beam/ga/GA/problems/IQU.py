@@ -10,12 +10,12 @@ from regpy.operators import Reshape, CoordinateMask, CoordinateProjection
 
 from joblib import Parallel, delayed
 
-import GA.solvers.EHT.MyFunc as EHTFunc
+from GA.problems.EHT import MyFunc as EHTFunc
 
 class MyFunc(EHTFunc):
     def __init__(self, obs, prior, data_term, reg_term, ttype='direct', rescalingI=0.02, rescaling=0.1, zbl=1, dim=1, mode='pareto'):
         ###Stokes I###
-        super().__init__(obs, init, prior, data_term, reg_term, ttype=ttype, rescaling=rescalingI, zbl=zbl, dim=dim, mode=mode)
+        super().__init__(obs, prior, data_term, reg_term, ttype=ttype, rescaling=rescalingI, zbl=zbl, dim=dim, mode=mode)
         
         ###POLARIZATION###
         #rescaling = 1
