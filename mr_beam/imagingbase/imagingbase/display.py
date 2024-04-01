@@ -537,8 +537,8 @@ def display(img, pol=None, cfun=False, interp='gaussian',
             cbar = plt.colorbar(im, fraction=0.046, pad=0.04,
                                 label=unit, orientation=cbar_orientation)
             cbar.ax.tick_params(labelsize=cbar_fontsize)
-            if cbar_lims:
-                plt.clim(cbar_lims[0], cbar_lims[1])
+            #if cbar_lims:
+            #    plt.clim(cbar_lims[0], cbar_lims[1])
         if has_title:
             plt.title("%s %.1f GHz : m=%.1f%% , v=%.1f%%" % (img.source, img.rf / 1e9,
                                                              img.lin_polfrac() * 100,
