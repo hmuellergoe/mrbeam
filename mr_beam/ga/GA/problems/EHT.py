@@ -29,7 +29,7 @@ class MyFunc():
         else:                
             self.wrapper_cph = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
                                 d='cphase', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+                                rescaling=rescaling, debias=False, maxset=True)
             
             self.func_cph = EhtimFunctional(self.wrapper_cph, domain)
             
@@ -38,7 +38,7 @@ class MyFunc():
         else:                
             self.wrapper_logcamp = EhtimWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
                                 d='logcamp', maxit=100, ttype=ttype, clipfloor=-100,
-                                rescaling=rescaling, debias=False)
+                                rescaling=rescaling, debias=False, maxset=True)
             
             self.func_logcamp = EhtimFunctional(self.wrapper_logcamp, domain)
             

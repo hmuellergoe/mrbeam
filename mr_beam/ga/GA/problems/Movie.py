@@ -32,7 +32,7 @@ class MyFunc():
                 try:
                         wrapper_cph = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
 				d='cphase', maxit=100, ttype=ttype, clipfloor=-100,
-				rescaling=rescaling, debias=False)
+				rescaling=rescaling, debias=False, maxset=True)
 			     
                         func_cph.append(EhtimFunctional(wrapper_cph, domain))
                 except:
@@ -40,7 +40,7 @@ class MyFunc():
                 try:
                         wrapper_logcamp = EhtimWrapper(obs_List[i], prior.copy(), prior.copy(), zbls[i],
 				d='logcamp', maxit=100, ttype=ttype, clipfloor=-100,
-				rescaling=rescaling, debias=False)
+				rescaling=rescaling, debias=False, maxset=True)
                         func_logcamp.append(EhtimFunctional(wrapper_logcamp, domain))
                 except:
                         func_logcamp.append(EmptyFunctional(domain))

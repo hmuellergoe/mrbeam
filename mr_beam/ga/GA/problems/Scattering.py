@@ -37,7 +37,7 @@ class MyFunc():
             self.func_cph = EmptyFunctional(domain)
         else:                
             self.wrapper_cph = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='cphase', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
+                                d='cphase', maxit=100, ttype=ttype, clipfloor=-100, debias=False, maxset=True)
             
             self.func_cph = ScatteringFunctional(self.wrapper_cph, domain)
             
@@ -45,7 +45,7 @@ class MyFunc():
             self.func_logcamp = EmptyFunctional(domain)
         else:                
             self.wrapper_logcamp = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='logcamp', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
+                                d='logcamp', maxit=100, ttype=ttype, clipfloor=-100, debias=False, maxset=True)
             
             self.func_logcamp = ScatteringFunctional(self.wrapper_logcamp, domain)
             
