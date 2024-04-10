@@ -1,5 +1,6 @@
 from imagingbase.solvers.wavelet_clean import DOGCLEAN, BesselCLEAN, HybridCLEAN
 from imagingbase.solvers.clean import CLEAN as HCLEAN
+from imagingbase.solvers.auto_clean import CLEAN as AutoCLEAN
 from regpy.operators import Convolution
 from imagingbase.operators.msi import DOGDictionary, BesselDictionary
 from regpy.discrs import Discretization
@@ -9,6 +10,7 @@ from imagingbase.solvers.utils import BuildMerger
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
 import numpy as np
+from scipy.ndimage import shift
 from IPython.display import display
 
 import regpy.stoprules as rules
@@ -24,7 +26,7 @@ from regpy.util import classlogger
 
 from copy import deepcopy 
 
-TRANSFORMS = ['DoG', 'Wt', 'Bessel', 'Hogbom', 'Hybrid']
+TRANSFORMS = ['DoG', 'Wt', 'Bessel', 'Hogbom', 'Hybrid', 'Auto']
 MSTRANSFORMS = ['DoG', 'Wt', 'Bessel', 'Hybrid']
 PLOTOPTIONS = ['dmap', 'cmap', 'dbeam', 'psf', 'window', 'fit', 'test', 'scales', 'cphase', 'phase', 'amp', 'cmps', 'reco_scale']
 CLIST = ['b', 'g', 'r', 'c', 'm', 'y']
@@ -138,6 +140,16 @@ class CLEAN:
         if self.transform == 'Hogbom':
             self.solver = HCLEAN(self.dmap.copy(), self.dbeam.copy(), self.psf.copy(), window)
 
+        if self.transform == 'Auto':
+            self.log.info("Initialize Autocorrelation preproducts")
+            if "window" not in self.args.keys():
+                self.args["window"] = np.ones(self.dmap.shape, dtype=bool)
+            
+            if "window_corr" not in self.args.keys():
+                self.args["window_corr"] = self.args.get("window")
+
+            self.solver = AutoCLEAN(self.dmap.copy(), self.dbeam.copy(), self.psf.copy(), **self.args)
+            
         self.reco = np.zeros(self.dmap.shape)
         
         self.log.info("Finalize initialization ...")
@@ -334,6 +346,19 @@ class CLEAN:
                     gain = cmap[j][2]
                     indices[position[0], position[1]] += gain * strength / self.solver.max_beam
             return indices
+        
+        if self.transform == "Auto":
+            self.log.info("Merge component list")
+            indices = np.zeros((self.solver.shape[0], self.solver.shape[1]))
+            for i in range(len(cmap_list)):
+                cmap = cmap_list[i]
+                for j in range(len(cmap)):
+                    position = cmap[j][0]
+                    strength = cmap[j][1]
+                    gain = cmap[j][2]
+                    basis_function = cmap[j][3]
+                    indices += gain * strength * shift(basis_function, position-self.solver.shape//2) / self.solver.max_beam
+            return indices
 
     def _merge(self, cmap_list, scale="all"):
         assert self.transform in MSTRANSFORMS
@@ -397,6 +422,9 @@ class CLEAN:
         self.reco_last = self.merge([self.cmap])
 
         self.reco += self.reco_last
+        #if self.transform == "Auto":
+        #    self.dmap = self.solver.dmap
+        #else:
         self.dmap = self.initial_dmap - self.conv(self.reco)
         self.log.info('Solver finished')
         self.log.info('std: {}'.format(np.std(self.dmap.flatten()[self.solver.window * self.plotting_window.flatten()])))
