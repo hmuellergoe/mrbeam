@@ -17,9 +17,8 @@ class MyFunc():
         grid = Discretization(np.prod(domain.shape))
         
         factor = domain.ones()
-        print("TEXT")
-        #factor[prior.imarr().shape:] = rescaling[1]
-        #factor[0:prior.imarr().shape] = rescaling[0]
+        factor[len(prior.imvec):] = rescaling[1]
+        factor[0:len(prior.imvec)] = rescaling[0]
         #factor[xdim:] = rescaling[1]
         #factor[0:ydim] = rescaling[0]
         
@@ -57,17 +56,11 @@ class MyFunc():
             
             self.func_amp = ScatteringFunctional(self.wrapper_amp, domain)
         
-        self.wrapper_epsilon = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='epsilon', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
-            
-        self.func_epsilon = ScatteringFunctional(self.wrapper_epsilon, domain)
-        
         self.data_fidelity_term = data_term['vis'] * self.func_vis \
                                     + data_term['amp'] * self.func_amp \
                                     + data_term['cphase'] * self.func_cph \
-                                    + data_term['logcamp'] * self.func_logcamp \
-                                    + data_term['epsilon'] * self.func_epsilon
-                                    
+                                    + data_term['logcamp'] * self.func_logcamp
+                                       
         self.data_fidelity_term = self.data_fidelity_term * op
         
         self.wrapper_l1 = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
@@ -88,14 +81,17 @@ class MyFunc():
         self.wrapper_flux = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
                             d='flux', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
         
-        
+        self.wrapper_epsilon = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
+                                d='epsilon', maxit=100, ttype=ttype, clipfloor=-100, rescaling=rescaling[1], debias=False)
+            
         self.func_l1 = ScatteringFunctional(self.wrapper_l1, domain)
         self.func_simple = ScatteringFunctional(self.wrapper_simple, domain)
         self.func_tv = ScatteringFunctional(self.wrapper_tv, domain)
         self.func_tvs = ScatteringFunctional(self.wrapper_tvs, domain)
         self.func_l2 = ScatteringFunctional(self.wrapper_l2, domain)
         self.func_flux = ScatteringFunctional(self.wrapper_flux, domain)
-        
+        self.func_epsilon = ScatteringFunctional(self.wrapper_epsilon, domain)
+                
         self.penalty_term = reg_term['l1w'] * self.func_l1
                             
         self.penalty_term = self.penalty_term * op
@@ -120,15 +116,19 @@ class MyFunc():
                             
         self.penalty_term6 = self.penalty_term6 * op
         
+        self.penalty_term7 = reg_term['epsilon'] * self.func_epsilon
+                            
+        self.penalty_term7 = self.penalty_term7 * op
         
         if mode == 'pareto':
             self.ob1 = self.data_fidelity_term + self.penalty_term
+            self.ob7 = self.data_fidelity_term + self.penalty_term7
             self.ob2 = self.data_fidelity_term + self.penalty_term2
             self.ob3 = self.data_fidelity_term + self.penalty_term3
             self.ob4 = self.data_fidelity_term + self.penalty_term4
             self.ob5 = self.data_fidelity_term + self.penalty_term5
             self.ob6 = self.data_fidelity_term + self.penalty_term6
-            self.ob7 = self.data_fidelity_term
+            self.ob8 = self.data_fidelity_term
             
         elif mode == 'shapley':
             self.ob1 = self.penalty_term
@@ -137,7 +137,8 @@ class MyFunc():
             self.ob4 = self.penalty_term4
             self.ob5 = self.penalty_term5
             self.ob6 = self.penalty_term6
-            self.ob7 = self.data_fidelity_term
+            self.ob7 = self.penalty_term7
+            self.ob8 = self.data_fidelity_term
             
         else:
             print('mode not implemented')
@@ -166,7 +167,7 @@ class Scattering:
         self.num_cores = num_cores
         
     def setFit(self):
-        self.fit = MyFunc(self.obs, self.prior, self.data_term, self.reg_term, rescaling=self.rescaling, zbl=self.zbl, mode=self.mode)
+        self.fit = MyFunc(self.obs, self.prior, self.data_term, self.reg_term, rescaling=[self.rescaling, self.rescaling_scattering], zbl=self.zbl, mode=self.mode)
         return self.fit
     
     def batch_fitness(self, dvs):
@@ -182,10 +183,10 @@ class Scattering:
     def fitness(self, x):
         if 'fit' not in self.__dict__:
             self.fit = self.setFit()
-        return [self.fit.ob1(x),self.fit.ob2(x),self.fit.ob3(x),self.fit.ob4(x),self.fit.ob5(x), self.fit.ob6(x), self.fit.ob7(x)]
+        return [self.fit.ob1(x),self.fit.ob2(x),self.fit.ob3(x),self.fit.ob4(x),self.fit.ob5(x), self.fit.ob6(x), self.fit.ob7(x), self.fit.ob8(x)]
     
     def get_nobj(self):
-        return 7
+        return 8
 
     def get_bounds(self):
         return (np.full((self.dim,),0.),np.full((self.dim,),1))
@@ -193,7 +194,7 @@ class Scattering:
 
     def gradient(self, x):
         return np.concatenate(( self.fit.ob1.gradient(x), self.fit.ob2.gradient(x), self.fit.ob3.gradient(x), 
-                              self.fit.ob4.gradient(x), self.fit.ob5.gradient(x), self.fit.ob6.gradient(x), self.fit.ob7.gradient(x) )) 
+                              self.fit.ob4.gradient(x), self.fit.ob5.gradient(x), self.fit.ob6.gradient(x), self.fit.ob7.gradient(x), self.fit.ob8.gradient(x) )) 
         #return estimate_gradient_h(lambda x: self.fitness(x), x)
 
     # Return function name

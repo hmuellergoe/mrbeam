@@ -10,6 +10,10 @@ REGKEYS = ['l1w', 'simple', 'tv', 'tv2', 'lA', 'flux', 'ngmem', 'entr', 'msimple
 DATKEYS = ['vis', 'amp', 'cphase', 'logcamp', 'pvis', 'cltrace']
 BOOLKEYS = ['preserve_diversity', 'use_gradient','parallel']
 
+def calculate_pop_size_8(grid_size):
+    x = np.arange(grid_size+1)
+    return int(np.sum(np.sum(np.meshgrid(x, x, x, x, x, x, x, x), axis=0) == grid_size))
+
 def calculate_pop_size_7(grid_size):
     x = np.arange(grid_size+1)
     return int(np.sum(np.sum(np.meshgrid(x, x, x, x, x, x, x), axis=0) == grid_size))
@@ -45,6 +49,8 @@ def read_config_params(file, probl):
         if key in BOOLKEYS:
             dictionary[key] = bool(field)
     
+    if probl == 'Scattering':
+        dictionary['pop_size'] = calculate_pop_size_8(dictionary['grid_size'])
     if probl == 'EHT':
         dictionary['pop_size'] = calculate_pop_size_7(dictionary['grid_size'])
     if probl == 'Pol':
