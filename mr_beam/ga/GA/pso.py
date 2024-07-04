@@ -15,7 +15,7 @@ from imagingbase.solvers.gradient_descent import Gradient_Descent
 
 class CooperativeGame():
 
-    def __init__(self, data, udp, fit, solver, scipy_option, prior, use_gradient, mode='shapley', res=0, epsilon=1e-5):
+    def __init__(self, data, udp, fit, solver, scipy_option, prior, use_gradient, mode='shapley', res=0, epsilon=1e-5, ideal=None):
         self.data = data
         self.udp = udp
         self.fit = fit
@@ -87,9 +87,14 @@ class CooperativeGame():
             self.npix = 2*self.npix-1
        
         #Find ideal point first
-        self.ideal = self.get_ideal()
+        if isinstance(ideal, np.ndarray):
+            assert len(ideal.shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
+            self.ideal = ideal
+        else:
+            self.ideal = self.get_ideal()
+            self.ideal = np.diagonal(self.ideal)
         self.axis_scaling = np.max(np.abs(self.ideal), axis=0)
-        self.ideal = np.diagonal(self.ideal)
+
         ##self.ideal = np.abs(self.ideal)
         
         self.optimizer = None
