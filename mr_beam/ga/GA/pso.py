@@ -15,7 +15,7 @@ from imagingbase.solvers.gradient_descent import Gradient_Descent
 
 class CooperativeGame():
 
-    def __init__(self, data, udp, fit, solver, scipy_option, prior, use_gradient, mode='shapley', res=0, epsilon=1e-5, ideal=None):
+    def __init__(self, data, udp, fit, solver, scipy_option, prior, use_gradient, mode='shapley', res=0, epsilon=1e-5, ideal_axis=[], prior_screen=None):
         self.data = data
         self.udp = udp
         self.fit = fit
@@ -53,6 +53,17 @@ class CooperativeGame():
             elif self.fit.get_name() == 'Scattering':
                 self.x0 = np.zeros(2*self.prior.xdim*self.prior.ydim-1)
                 self.x0[0:self.prior.xdim*self.prior.ydim] = self.prior.imvec / self.data['rescaling']
+                if not prior_screen:
+                    # TODO hanndle dim errors
+                    print("A random screen will be generated with random seed 190 and prior as ref image")
+                    ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=190)
+                    sm = eh.scattering.ScatteringModel()
+                    ep_phase = sm.MakePhaseScreen(ep, self.prior)
+                    self.x0[self.prior.xdim*self.prior.ydim:] = ep_phase.imvec[:-1]
+                else:
+                    print("Using prior screen")
+                    self.x0[self.prior.xdim*self.prior.ydim:] = prior_screen
+
             else:
                 self.x0 = self.prior.imvec / self.data['rescaling']
             self.image_dummy = self.prior.copy()
@@ -87,13 +98,17 @@ class CooperativeGame():
             self.npix = 2*self.npix-1
        
         #Find ideal point first
-        if isinstance(ideal, np.ndarray):
-            assert len(ideal.shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
-            self.ideal = ideal
+        if len(ideal_axis) == 2:
+            assert len(ideal_axis[0].shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
+            assert len(ideal_axis[1].shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
+            self.ideal = ideal_axis[0]
+            self.axis_scaling = ideal_axis[1] #TODO it should be given as a keyword argument, saved with ideal  np.max(np.abs(self.ideal), axis=0)
         else:
+            print("Either your didn't pass any ideal_axis vector, or it's wrong. ideal and axis will be computed")
             self.ideal = self.get_ideal()
+            self.axis_scaling = np.max(np.abs(self.ideal), axis=0)
             self.ideal = np.diagonal(self.ideal)
-        self.axis_scaling = np.max(np.abs(self.ideal), axis=0)
+
 
         ##self.ideal = np.abs(self.ideal)
         
