@@ -15,7 +15,7 @@ from imagingbase.solvers.gradient_descent import Gradient_Descent
 
 class CooperativeGame():
 
-    def __init__(self, data, udp, fit, solver, scipy_option, prior, use_gradient, mode='shapley', res=0, epsilon=1e-5, ideal_axis=[], prior_screen=None):
+    def __init__(self, data, udp, fit, solver, scipy_option, prior, use_gradient, mode='shapley', res=0, epsilon=1e-5, ideal_axis=[], scattering_args=dict()):
         self.data = data
         self.udp = udp
         self.fit = fit
@@ -53,16 +53,20 @@ class CooperativeGame():
             elif self.fit.get_name() == 'Scattering':
                 self.x0 = np.zeros(2*self.prior.xdim*self.prior.ydim-1)
                 self.x0[0:self.prior.xdim*self.prior.ydim] = self.prior.imvec / self.data['rescaling']
-                if not prior_screen:
+                rngseed = scattering_args.get('rngseed', 190)
+                Vx_km_per_s = scattering_args.get('Vx_speed_s', 50)
+                t_hr = scattering_args.get('t_hr', prior.time)
+                prior_screen = scattering_args.get('prior_screen', np.array([]))
+                if len(prior_screen.imvec) == 0:
                     # TODO hanndle dim errors
-                    print("A random screen will be generated with random seed 190 and prior as ref image")
-                    ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=190)
+                    print(f"A random screen will be generated with random seed {rngseed}, Vx km/s {Vx_km_per_s}  and prior as ref image")
+                    ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=rngseed)
                     sm = eh.scattering.ScatteringModel()
-                    ep_phase = sm.MakePhaseScreen(ep, self.prior)
+                    ep_phase = sm.MakePhaseScreen(ep, self.prior, Vx_km_per_s=Vx_km_per_s, t_hr=t_hr) # for snapshot imaging, prior must change
                     self.x0[self.prior.xdim*self.prior.ydim:] = ep_phase.imvec[:-1]
                 else:
                     print("Using prior screen")
-                    self.x0[self.prior.xdim*self.prior.ydim:] = prior_screen
+                    self.x0[self.prior.xdim*self.prior.ydim:] = prior_screen.imvec[:-1]
 
             else:
                 self.x0 = self.prior.imvec / self.data['rescaling']
