@@ -3,6 +3,7 @@ from regpy.functionals import Functional
 import ehtim.scattering as so
 import ehtim.const_def as ehc
 import numpy as np
+import pdb
 
 class ScatteringWrapper(EhtimWrapper):
     def __init__(self, Obsdata, InitIm, Prior, flux, d='vis', **kwargs):
@@ -16,7 +17,8 @@ class ScatteringWrapper(EhtimWrapper):
         self._ea_ker_gradient_x = None
         self._ea_ker_gradient_y = None
         self._alpha_phi_list = []
-        self.alpha_phi_next = self.kwargs.get('alpha_phi', 1e4)
+        #self.alpha_phi_next = self.kwargs.get('alpha_phi', 1e4)
+        self.alpha_phi_next = self.kwargs.get('alpha_phi', 1)
         
         if self.scattering_model is None:
             self.scattering_model = so.ScatteringModel()
