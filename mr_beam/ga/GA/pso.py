@@ -103,8 +103,8 @@ class CooperativeGame():
        
         #Find ideal point first
         if len(ideal_axis) == 2:
-            assert len(ideal_axis[0].shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
-            assert len(ideal_axis[1].shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
+            assert len(ideal_axis[0]) == self.udp.get_nobj(), f'Number of objectives {self.udp.get_nobj()} dont match number ideals {len(ideal_axis[0])}'
+            assert len(ideal_axis[1]) == self.udp.get_nobj(), f'Number of objectives {self.udp.get_nobj()} dont match number scaling_axis {len(ideal_axis[1])}'
             self.ideal = ideal_axis[0]
             self.axis_scaling = ideal_axis[1] #TODO it should be given as a keyword argument, saved with ideal  np.max(np.abs(self.ideal), axis=0)
         else:
