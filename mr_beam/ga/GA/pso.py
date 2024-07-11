@@ -57,7 +57,7 @@ class CooperativeGame():
                 Vx_km_per_s = scattering_args.get('Vx_speed_s', 50)
                 t_hr = scattering_args.get('t_hr', prior.time)
                 prior_screen = scattering_args.get('prior_screen', np.array([]))
-                if len(prior_screen.imvec) == 0:
+                if isinstance(prior_screen, np.ndarray):
                     # TODO hanndle dim errors
                     print(f"A random screen will be generated with random seed {rngseed}, Vx km/s {Vx_km_per_s}  and prior as ref image")
                     ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=rngseed)
