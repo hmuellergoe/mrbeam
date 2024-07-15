@@ -10,7 +10,7 @@ class ScatteringWrapper(EhtimWrapper):
         super().__init__(Obsdata, InitIm, Prior, flux, d=d, **kwargs)
         
         # Parameters related to scattering
-        self.epsilon_list_next = []
+        self.epsilon_list_next = self.kwargs.get('epsilon_screen', []) 
         self.scattering_model = self.kwargs.get('scattering_model', None)
         self._sqrtQ = None
         self._ea_ker = None
@@ -55,9 +55,9 @@ class ScatteringFunctional(Functional):
         
     def _eval(self, minvec):
         N = self.handler.Prior.xdim
-
         imvec = minvec[:N**2]
         EpsilonList = minvec[N**2:]
+        
         if self.handler.logim:
             imvec = np.exp(imvec)
 
@@ -76,7 +76,8 @@ class ScatteringFunctional(Functional):
             elif self.handler.d == 'epsilon':
                 # Scattering screen regularization term
                 chisq_epsilon = sum(EpsilonList*EpsilonList)/((N*N-1.0)/2.0)
-                return self.handler.alpha_phi_next * (chisq_epsilon - 1.0)
+                # return self.handler.alpha_phi_next * (chisq_epsilon - 1.0)
+                return self.handler.alpha_phi_next * (chisq_epsilon - 0.01)
             else:
                 return self.handler._reg(imvec)
         
