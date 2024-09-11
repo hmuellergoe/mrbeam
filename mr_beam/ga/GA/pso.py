@@ -57,16 +57,16 @@ class CooperativeGame():
                 Vx_km_per_s = scattering_args.get('Vx_speed_s', 50)
                 t_hr = scattering_args.get('t_hr', prior.time)
                 prior_screen = scattering_args.get('prior_screen', np.array([]))
-                if len(prior_screen.imvec) == 0:
+                if len(prior_screen) == 0:
                     # TODO hanndle dim errors
                     print(f"A random screen will be generated with random seed {rngseed}, Vx km/s {Vx_km_per_s}  and prior as ref image")
                     ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=rngseed)
-                    sm = eh.scattering.ScatteringModel()
-                    ep_phase = sm.MakePhaseScreen(ep, self.prior, Vx_km_per_s=Vx_km_per_s, t_hr=t_hr) # for snapshot imaging, prior must change
-                    self.x0[self.prior.xdim*self.prior.ydim:] = ep_phase.imvec[:-1]
+                    # sm = eh.scattering.ScatteringModel()
+                    # ep_phase = sm.MakePhaseScreen(ep, self.prior, Vx_km_per_s=Vx_km_per_s, t_hr=t_hr) # for snapshot imaging, prior must change
+                    self.x0[self.prior.xdim*self.prior.ydim:] = ep_phase.flatten()[:-1]
                 else:
                     print("Using prior screen")
-                    self.x0[self.prior.xdim*self.prior.ydim:] = prior_screen.imvec[:-1]
+                    self.x0[self.prior.xdim*self.prior.ydim:] = prior_screen.copy()
 
             else:
                 self.x0 = self.prior.imvec / self.data['rescaling']
@@ -103,8 +103,8 @@ class CooperativeGame():
        
         #Find ideal point first
         if len(ideal_axis) == 2:
-            assert len(ideal_axis[0].shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
-            assert len(ideal_axis[1].shape) == self.udp.get_nobj(), 'Number of objective dont match number ideals'
+            assert len(ideal_axis[0]) == self.udp.get_nobj(), f'Number of objectives {self.udp.get_nobj()} dont match number ideals {len(ideal_axis[0])}'
+            assert len(ideal_axis[1]) == self.udp.get_nobj(), f'Number of objectives {self.udp.get_nobj()} dont match number scaling_axis {len(ideal_axis[1])}'
             self.ideal = ideal_axis[0]
             self.axis_scaling = ideal_axis[1] #TODO it should be given as a keyword argument, saved with ideal  np.max(np.abs(self.ideal), axis=0)
         else:
