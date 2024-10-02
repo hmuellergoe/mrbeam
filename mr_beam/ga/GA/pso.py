@@ -60,7 +60,9 @@ class CooperativeGame():
                 if len(prior_screen) == 0:
                     # TODO hanndle dim errors
                     print(f"A random screen will be generated with random seed {rngseed}, Vx km/s {Vx_km_per_s}  and prior as ref image")
+                    rng_state = np.random.get_state()
                     ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=rngseed)
+                    np.random.set_state(rng_state)
                     # sm = eh.scattering.ScatteringModel()
                     # ep_phase = sm.MakePhaseScreen(ep, self.prior, Vx_km_per_s=Vx_km_per_s, t_hr=t_hr) # for snapshot imaging, prior must change
                     self.x0[self.prior.xdim*self.prior.ydim:] = ep_phase.flatten()[:-1]
