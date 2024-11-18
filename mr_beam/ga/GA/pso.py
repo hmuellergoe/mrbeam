@@ -168,7 +168,7 @@ class CooperativeGame():
         
         #if shapley only the line before, for the ideal way, all line:   
         if self.mode == 'pareto':
-            ideal = np.transpose(ideal.transpose()[:-1]-ideal[:-1,-1])
+            ideal = np.transpose(ideal[:-1].transpose()-ideal[:-1,-1])
         #self.ideal[:,-1] = ideal[:,-1]
         #print(self.ideal, ideal)
         #self.ideal = np.abs(self.ideal)
