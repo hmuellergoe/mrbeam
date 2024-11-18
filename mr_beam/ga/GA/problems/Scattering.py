@@ -9,9 +9,11 @@ from regpy.operators import Reshape
 from regpy.operators import Multiplication
 from joblib import Parallel, delayed
 
+import pdb
+
 class MyFunc():
-    def __init__(self, obs, prior, data_term, reg_term, ttype='direct', rescaling=[0.02, 0.02], zbl=1, dim=1, mode='pareto'):
-        
+    def __init__(self, obs, prior, data_term, reg_term, ttype='direct', rescaling=[0.02, 0.02], zbl=1, dim=1, mode='pareto', epsilon_screen_prior=np.array([])):
+       
         xdim, ydim = prior.imarr().shape
         domain = Discretization(2 * xdim*ydim - 1)
         grid = Discretization(np.prod(domain.shape))
@@ -82,7 +84,8 @@ class MyFunc():
                             d='flux', maxit=100, ttype=ttype, clipfloor=-100, debias=False)
         
         self.wrapper_epsilon = ScatteringWrapper(obs.copy(), prior.copy(), prior.copy(), zbl,
-                                d='epsilon', maxit=100, ttype=ttype, clipfloor=-100, rescaling=rescaling[1], debias=False)
+                                d='epsilon', maxit=100, ttype=ttype, clipfloor=-100, rescaling=rescaling[1], 
+                                debias=False, epsilon_screen=epsilon_screen_prior)
             
         self.func_l1 = ScatteringFunctional(self.wrapper_l1, domain)
         self.func_simple = ScatteringFunctional(self.wrapper_simple, domain)
@@ -153,7 +156,7 @@ class Scattering:
     USAGE: my_mo_problem()
     """
         
-    def __init__(self, obs, prior, data_term, reg_term, rescaling, zbl, dim, num_cores=16, ttype='direct', mode='pareto'):
+    def __init__(self, obs, prior, data_term, reg_term, rescaling, zbl, dim, num_cores=16, ttype='direct', mode='pareto', epsilon_screen_prior=np.array([])):
         self.obs = obs
         self.prior = prior
         self.data_term = data_term
@@ -165,9 +168,11 @@ class Scattering:
         self.mode = mode
         
         self.num_cores = num_cores
+
+        self.epsilon_screen_prior = epsilon_screen_prior
         
     def setFit(self):
-        self.fit = MyFunc(self.obs, self.prior, self.data_term, self.reg_term, rescaling=[self.rescaling, self.rescaling_scattering], zbl=self.zbl, mode=self.mode)
+        self.fit = MyFunc(self.obs, self.prior, self.data_term, self.reg_term, rescaling=[self.rescaling, self.rescaling_scattering], zbl=self.zbl, mode=self.mode, epsilon_screen_prior=self.epsilon_screen_prior)
         return self.fit
     
     def batch_fitness(self, dvs):

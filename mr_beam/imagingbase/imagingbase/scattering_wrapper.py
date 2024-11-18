@@ -3,20 +3,22 @@ from regpy.functionals import Functional
 import ehtim.scattering as so
 import ehtim.const_def as ehc
 import numpy as np
+import pdb
 
 class ScatteringWrapper(EhtimWrapper):
     def __init__(self, Obsdata, InitIm, Prior, flux, d='vis', **kwargs):
         super().__init__(Obsdata, InitIm, Prior, flux, d=d, **kwargs)
         
         # Parameters related to scattering
-        self.epsilon_list_next = []
+        self.epsilon_list_next = self.kwargs.get('epsilon_screen', []) 
         self.scattering_model = self.kwargs.get('scattering_model', None)
         self._sqrtQ = None
         self._ea_ker = None
         self._ea_ker_gradient_x = None
         self._ea_ker_gradient_y = None
         self._alpha_phi_list = []
-        self.alpha_phi_next = self.kwargs.get('alpha_phi', 1e4)
+        #self.alpha_phi_next = self.kwargs.get('alpha_phi', 1e4)
+        self.alpha_phi_next = self.kwargs.get('alpha_phi', 1)
         
         if self.scattering_model is None:
             self.scattering_model = so.ScatteringModel()
@@ -53,9 +55,9 @@ class ScatteringFunctional(Functional):
         
     def _eval(self, minvec):
         N = self.handler.Prior.xdim
-
         imvec = minvec[:N**2]
         EpsilonList = minvec[N**2:]
+        
         if self.handler.logim:
             imvec = np.exp(imvec)
 
@@ -74,7 +76,8 @@ class ScatteringFunctional(Functional):
             elif self.handler.d == 'epsilon':
                 # Scattering screen regularization term
                 chisq_epsilon = sum(EpsilonList*EpsilonList)/((N*N-1.0)/2.0)
-                return self.handler.alpha_phi_next * (chisq_epsilon - 1.0)
+                # return self.handler.alpha_phi_next * (chisq_epsilon - 1.0)
+                return self.handler.alpha_phi_next * (chisq_epsilon - 0.01)
             else:
                 return self.handler._reg(imvec)
         
