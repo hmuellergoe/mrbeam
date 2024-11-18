@@ -28,6 +28,7 @@ class CLEAN(Solver):
         #    self.window = np.zeros(self.dmap.shape, dtype=int)
 
         self.shape = np.asarray( self.dbeam.shape )
+        self.shifted = np.zeros(self.shape)
         self.indices = np.arange(0, np.prod(self.shape))[self.window]
 
         assert self.dmap.shape == self.dbeam.shape
@@ -50,7 +51,7 @@ class CLEAN(Solver):
         self.y = self.dmap.flatten()
 
     def _minor_loop(self):
-        self.dmap -= self.gain * self.strength * shift(self.dbeam, self.index-self.shape//2)
+        self.dmap -= self.gain * self.strength * self.shift(self.dbeam, self.index-self.shape//2)
 
     def _next(self):
         if self.add_only_positive_coeff:
@@ -72,20 +73,30 @@ class CLEAN(Solver):
     def finalize(self):
         cmap = self.dmap.copy()
         for item in self.x:
-            cmap += self.gain*item[1]*shift(self.psf, item[0]-self.shape//2)
+            cmap += self.gain*item[1]*self.shift(self.psf, item[0]-self.shape//2)
         return cmap
     
     def intermediate(self):
         cmap = np.zeros(self.shape)
         for item in self.x:
-            cmap += self.gain*item[1]*shift(self.psf, item[0]-self.shape//2)
+            cmap += self.gain*item[1]*self.shift(self.psf, item[0]-self.shape//2)
         self.x = []
         return cmap
     
     def update_map_list(self, dmap):
         self.dmap = dmap #/ self.flux_dbeam
 
-
+    def shift(self, x, index):
+        self.shifted *= 0
+        #bottom = np.maximum(0, index[0])
+        #top = np.minimum(-1, -1+index[0])
+        #left = np.maximum(0, index[1])
+        #right = np.minimum(-1, -1+index[1])
+        #self.shifted[bottom:top,left:right] = np.roll(x, index, axis=[0,1])[bottom:top,left:right]
+        
+        self.shifted = np.roll(x, index, axis=[0,1])
+        
+        return self.shifted
 
 
 
