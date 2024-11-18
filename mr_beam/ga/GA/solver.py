@@ -70,6 +70,7 @@ def solve(**kwargs):
     print (probl)
     
     config = kwargs.get('config')
+    ttype = kwargs.get('ttype', 'direct')
     
     if probl == 'EHT':
         
@@ -111,7 +112,7 @@ def solve(**kwargs):
         prior = prior.add_gauss(zbl, (prior_fwhm, prior_fwhm, 0, 0, 0))
         
         num_cores = dictionary['num_cores']
-        EHTfit = EHT.EHT(obs, prior, data_term, reg_term, rescaling, zbl, npix*npix, num_cores=num_cores, mode=dictionary['mode'])
+        EHTfit = EHT.EHT(obs, prior, data_term, reg_term, rescaling, zbl, npix*npix, num_cores=num_cores, ttype=ttype, mode=dictionary['mode'])
         EHTfit.setFit()
         
         #prior = EHTfit.wrapper.Obsdata.dirtyimage(npix, fov).imarr()

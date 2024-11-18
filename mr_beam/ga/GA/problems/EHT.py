@@ -181,9 +181,10 @@ class EHT:
         self.mode = mode
         
         self.num_cores = num_cores
+        self.ttype=ttype
         
     def setFit(self):
-        self.fit = MyFunc(self.obs, self.prior, self.data_term, self.reg_term, rescaling=self.rescaling, zbl=self.zbl, mode=self.mode)
+        self.fit = MyFunc(self.obs, self.prior, self.data_term, self.reg_term, ttype=self.ttype, rescaling=self.rescaling, zbl=self.zbl, mode=self.mode)
         return self.fit
     
     def batch_fitness(self, dvs):
