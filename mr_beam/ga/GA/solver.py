@@ -6,7 +6,7 @@ sys.path.append('/')
 STRINGKEYS = ['img', 'uvf', 'decomposition_method', 'minimization_algorithm', 'mode']
 FLOATKEYS = ['rescaling', 'rescalingV', 'zbl', 'prior_fwhm', 'CR', 'F', 'eta_m', 'realb', 'blur_circ', 'C', 'tau', 'pcut', 'max_weight', 'snr']
 INTKEYS = ['grid_size', 'seed_initial', 'num_cores', 'generations', 'neighbours', 'decomposition_seed', 'limit']
-REGKEYS = ['l1w', 'simple', 'tv', 'tv2', 'lA', 'flux', 'ngmem', 'entr', 'msimple', 'hw', 'ptv']
+REGKEYS = ['l1w', 'simple', 'tv', 'tv2', 'lA', 'flux', 'ngmem', 'entr', 'msimple', 'hw', 'ptv', 'epsilon']
 DATKEYS = ['vis', 'amp', 'cphase', 'logcamp', 'pvis', 'cltrace']
 BOOLKEYS = ['preserve_diversity', 'use_gradient','parallel']
 
