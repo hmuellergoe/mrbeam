@@ -167,8 +167,11 @@ class HWFunctional(Functional):
             norm = 1
 
         mimage = np.sqrt(self.handler.rescaling**2 * poltuple[:self.handler.inittuple.shape[1]]**2 + self.handlerV.rescaling**2 *((poltuple[2*self.handler.inittuple.shape[1]:]-0.5))**2)
-        S = -np.sum(self.iimage * (((1+mimage)/2) * np.log((1+mimage)/2) + ((1-mimage)/2) * np.log((1-mimage)/2)))
-        return S/norm
+        if np.max(mimage > 1.0):
+            return np.inf
+        else:
+            S = -np.sum(self.iimage * (((1+mimage)/2) * np.log((1+mimage)/2) + ((1-mimage)/2) * np.log((1-mimage)/2)))
+            return S/norm
     
     def _gradient(self, poltuple):
         """Gradient of the Holdaway-Wardle polarimetric entropy
