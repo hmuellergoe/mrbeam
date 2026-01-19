@@ -12,6 +12,10 @@ from pyswarms.backend import topology
 
 from imagingbase.solvers.gradient_descent import Gradient_Descent
 
+class results_class():
+    def __init__(self):
+        return
+
 
 class CooperativeGame():
 
@@ -63,7 +67,7 @@ class CooperativeGame():
                     ep = eh.scattering.MakeEpsilonScreen(self.prior.xdim, self.prior.ydim, rngseed=rngseed)
                     # sm = eh.scattering.ScatteringModel()
                     # ep_phase = sm.MakePhaseScreen(ep, self.prior, Vx_km_per_s=Vx_km_per_s, t_hr=t_hr) # for snapshot imaging, prior must change
-                    self.x0[self.prior.xdim*self.prior.ydim:] = ep_phase.flatten()[:-1]
+                    self.x0[self.prior.xdim*self.prior.ydim:] = ep.flatten()[:-1]
                 else:
                     print("Using prior screen")
                     self.x0[self.prior.xdim*self.prior.ydim:] = prior_screen.copy()
@@ -300,10 +304,7 @@ class CooperativeGame():
                 x = x0.copy()
                 for i in range(self.scipy_option['maxiter']):
                    x -= self.scipy_option['tau'] * self.objective_grad(x) 
-                class results():
-                    def __init__(self):
-                        return
-                result = results()
+                result = results_class()
                 result.x = x
             else:
                 result = minimize(self.objective, x0, jac=jac, method=self.minimization_algorithm, options=self.scipy_option, bounds=bounds)
