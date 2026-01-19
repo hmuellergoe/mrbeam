@@ -396,19 +396,22 @@ class EmptyFunctional(Functional):
 
 class EhtimOperator(Operator):
     def __init__(self, handler, domain, codomain=None):
-        assert handler.ttype == 'direct' or handler.ttype == 'nfft'
+        assert handler.ttype == 'direct' or handler.ttype == 'nfft' or handler.ttype=='fast'
         self.handler = handler
-        codomain = codomain or Discretization(self.handler.A.shape[0], dtype=complex)
+        if handler.ttype == 'direct' or handler.ttype == 'nfft':
+            codomain = codomain or Discretization(self.handler.A.shape[0], dtype=complex)
+        if handler.ttype == 'fast':
+            codomain = codomain or Discretization(self.handler.A[1][0].uv.shape[1], dtype=complex)
         super().__init__(domain, codomain, linear=True)
 
     def _eval(self, x):
-        return self.handler.A @ x.flatten()
-
-    def _adjoint(self, y):
-        toret = np.conjugate(self.handler.A.T) @ y
-        if self.domain.is_complex == False:
-            toret = np.real(toret)
-        return toret.reshape(self.domain.shape)
+        if self.handler.ttype == 'direct' or self.handler.ttype == 'nfft':
+            return self.handler.A @ x.flatten()
+        else:
+            vis_arr = obsh.fft_imvec(x, self.handler.A[0])
+            im_info, sampler_info_list, gridder_info_list = self.handler.A
+            samples = obsh.sampler(vis_arr, sampler_info_list, sample_type="vis") 
+            return self.handler.rescaling * samples
 
     
 class EhtimObsdata(Obsdata):
