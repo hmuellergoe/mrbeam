@@ -1,7 +1,7 @@
 import numpy as np
 import ehtim as eh
 
-from imagingbase.ehtim_wrapper import EhtimWrapper, EhtimFunctional, EhtimOperator
+from imagingbase.ehtim_wrapper import EhtimWrapper, EhtimFunctional, EhtimOperator, EmptyFunctional
 from regpy.operators import CoordinateProjection
 from regpy.solvers import HilbertSpaceSetting
 from regpy.solvers.forward_backward_splitting import Forward_Backward_Splitting
@@ -15,8 +15,6 @@ import regpy.stoprules as rules
 
 from MSI.Image import ConversionBase
 
-import ehtplot.color
-
 class MinimizationHandler:
     def __init__(self, psf_fwhm, npix, fov, obs_sc, prior, zbl, rescaling, data_term, cbar_lims, threshold, repair, to_cat, **kwargs):
         self.psf_fwhm = psf_fwhm
@@ -29,12 +27,14 @@ class MinimizationHandler:
         self.rescaling = rescaling
         self.data_term = data_term
         
-        self.cfun = 'afmhot_u'
+        self.cfun = 'afmhot'
         self.cbar_lims = cbar_lims
         
         self.img = prior.regrid_image(self.fov, self.npix+1)
         
         self.debias = kwargs.get('debias', False)
+        
+        self.logcamp = kwargs.get('logcamp', True)
 
         #Initialize wrapper objects to ehtim
         self.wrapper = EhtimWrapper(self.obs_sc.copy(), self.img.copy(), self.img.copy(), self.zbl,
@@ -48,8 +48,8 @@ class MinimizationHandler:
         self.wrapper_cphase = EhtimWrapper(self.obs_sc.copy(), self.img.copy(), self.img.copy(), self.zbl,
                               d='cphase', maxit=100, ttype='direct', clipfloor=-100,
                               rescaling=self.rescaling, debias=self.debias)
-        
-        self.wrapper_logcamp = EhtimWrapper(self.obs_sc.copy(), self.img.copy(), self.img.copy(), self.zbl,
+        if self.logcamp:
+            self.wrapper_logcamp = EhtimWrapper(self.obs_sc.copy(), self.img.copy(), self.img.copy(), self.zbl,
                               d='logcamp', maxit=100, ttype='direct', clipfloor=-100,
                               rescaling=self.rescaling, debias=self.debias)
 
@@ -96,8 +96,11 @@ class MinimizationHandler:
         self.data_fidelity_vis = EhtimFunctional(self.wrapper, self.grid) * self.op
         self.data_fidelity_amp = EhtimFunctional(self.wrapper_amp, self.grid) * self.op
         self.data_fidelity_cphase = EhtimFunctional(self.wrapper_cphase, self.grid) * self.op
-        self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
-               
+        if self.logcamp:
+            self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
+        else:
+            self.data_fidelity_logcamp = EmptyFunctional(self.data_fidelity_amp.domain)
+            
         self.data_fidelity_closure = data_term['cphase'] * self.data_fidelity_cphase \
                 + data_term['logcamp'] * self.data_fidelity_logcamp    
                 
@@ -483,10 +486,14 @@ class MinimizationHandler:
     
     def fifth_round(self, init, data_term, tau=0.1, **kwargs):
         #Visibility data fidelity operator
-        data_fidelity_all = data_term['vis'] * EhtimFunctional(self.wrapper, self.grid) \
-                + data_term['cphase'] * EhtimFunctional(self.wrapper_cphase, self.grid) \
-                + data_term['logcamp'] * EhtimFunctional(self.wrapper_logcamp, self.grid)
-             
+        if self.logcamp:
+            data_fidelity_all = data_term['vis'] * EhtimFunctional(self.wrapper, self.grid) \
+                    + data_term['cphase'] * EhtimFunctional(self.wrapper_cphase, self.grid) \
+                    + data_term['logcamp'] * EhtimFunctional(self.wrapper_logcamp, self.grid)
+        else:
+            data_fidelity_all = data_term['vis'] * EhtimFunctional(self.wrapper, self.grid) \
+                    + data_term['cphase'] * EhtimFunctional(self.wrapper_cphase, self.grid)
+                    
         #test stepsize
         start_fidelity = data_fidelity_all(init)
         
@@ -541,7 +548,8 @@ class MinimizationHandler:
         
         self.wrapper.updateobs(obs_sc.copy())
         self.wrapper_amp.updateobs(obs_sc.copy())
-        self.wrapper_logcamp.updateobs(obs_sc.copy())
+        if self.logcamp:
+            self.wrapper_logcamp.updateobs(obs_sc.copy())
         self.wrapper_cphase.updateobs(obs_sc.copy())
         
         #self.dog_trafo = DOGTransform(self.grid, self.widths)
@@ -552,7 +560,8 @@ class MinimizationHandler:
         self.data_fidelity_vis = EhtimFunctional(self.wrapper, self.grid) * self.op
         self.data_fidelity_amp = EhtimFunctional(self.wrapper_amp, self.grid) * self.op
         self.data_fidelity_cphase = EhtimFunctional(self.wrapper_cphase, self.grid) * self.op
-        self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
+        if self.logcamp:
+            self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
 
     def grad_desc(self, init, tau, data_fidelity, setting, maxit=1000, stop=0, display=True):
         
@@ -676,7 +685,8 @@ class MinimizationHandler:
         self.data_fidelity_vis = EhtimFunctional(self.wrapper, self.grid) * self.op
         self.data_fidelity_amp = EhtimFunctional(self.wrapper_amp, self.grid) * self.op       
         self.data_fidelity_cphase = EhtimFunctional(self.wrapper_cphase, self.grid) * self.op
-        self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
+        if self.logcamp:
+            self.data_fidelity_logcamp = EhtimFunctional(self.wrapper_logcamp, self.grid) * self.op
                
         self.data_fidelity_closure = self.data_term['cphase'] * self.data_fidelity_cphase \
                 + self.data_term['logcamp'] * self.data_fidelity_logcamp      

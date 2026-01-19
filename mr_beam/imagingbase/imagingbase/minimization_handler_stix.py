@@ -15,7 +15,7 @@ import regpy.stoprules as rules
 
 from MSI.Image import ConversionBase
 
-import ehtplot.color
+#import ehtplot.color
 
 class MinimizationHandler:
     def __init__(self, psf_fwhm, npix, fov, obs_sc, prior, zbl, rescaling, data_term, cbar_lims, threshold, repair, to_cat, **kwargs):
@@ -29,7 +29,7 @@ class MinimizationHandler:
         self.rescaling = rescaling
         self.data_term = data_term
         
-        self.cfun = 'afmhot_u'
+        self.cfun = 'afmhot'
         self.cbar_lims = cbar_lims
         
         self.img = prior.regrid_image(self.fov, self.npix+1)
