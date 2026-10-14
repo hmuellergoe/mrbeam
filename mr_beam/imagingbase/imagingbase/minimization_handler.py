@@ -1,5 +1,6 @@
 import numpy as np
 import ehtim as eh
+from skimage.restoration import richardson_lucy as rl
 
 from imagingbase.ehtim_wrapper import EhtimWrapper, EhtimFunctional, EhtimOperator, EmptyFunctional
 from regpy.operators import CoordinateProjection
@@ -15,7 +16,7 @@ import regpy.stoprules as rules
 
 from MSI.Image import ConversionBase
 
-import ehtplot.color
+#import ehtplot.color
 
 class MinimizationHandler:
     def __init__(self, psf_fwhm, npix, fov, obs_sc, prior, zbl, rescaling, data_term, cbar_lims, threshold, repair, to_cat, **kwargs):
@@ -29,7 +30,7 @@ class MinimizationHandler:
         self.rescaling = rescaling
         self.data_term = data_term
         
-        self.cfun = 'afmhot_u'
+        self.cfun = 'afmhot'
         self.cbar_lims = cbar_lims
         
         self.img = prior.regrid_image(self.fov, self.npix+1)
@@ -304,7 +305,18 @@ class MinimizationHandler:
         
     
     
-    def first_round(self, init, data_term, cycles=10, maxit=50, epochs=10, sys_noise=0.02, uv_zblcut=0.1*10**9, stop=1e-4, last_epochs=False):
+    def first_round(self, init, data_term, cycles=10, maxit=50, epochs=10, sys_noise=0.02, uv_zblcut=0.1*10**9, stop=1e-4, last_epochs=False, deblur=False):
+        init_f = init.copy()
+        if deblur:
+            delta = self.wrapper.Prior.copy()
+            delta.imvec = self.op.ops[0].besseldict.dirac.flatten()
+            delta = delta.blur_circ(self.res)
+            init_f.imvec = rl(init.imarr(),delta.imarr()).flatten()
+            init_f.threshold(0.7,fill_val=0.0)
+            init_f.imvec = np.where(init_f.imvec>0.0, 1.0, init_f.imvec)
+            init_f.imvec *= self.zbl/init_f.total_flux()
+            #init_f = init_f.blur_circ(self.res/np.sqrt(2))
+            
         # constant regularization weights
         reg_term  = {'simple' : 0*100,    # Maximum-Entropy
                      'tv'     : 0*1.0,    # Total Variation
@@ -313,7 +325,7 @@ class MinimizationHandler:
                      'flux'   : 1e4}    # compact flux constraint
         
         # Initialize imaging with a Gaussian image
-        self.imgr = eh.imager.Imager(self.obs_sc, init, prior_im=init,
+        self.imgr = eh.imager.Imager(self.obs_sc, init_f, prior_im=init_f,
                             flux=self.zbl, data_term=data_term, maxit=maxit,
                             norm_reg=True, systematic_noise=sys_noise,
                             reg_term=reg_term, ttype=self.wrapper.ttype, cp_uv_min=uv_zblcut, stop=stop)

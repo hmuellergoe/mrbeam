@@ -13,7 +13,7 @@ import ehtim.scattering as so
 
 import itertools as it
 
-import ehtplot.color
+#import ehtplot.color
 
 from joblib import Parallel, delayed
 from multiprocessing import Pool
@@ -189,7 +189,7 @@ class EhtimWrapper():
         self.nit += 1
 
     def _plot_i(self, im, Prior, nit, **kwargs):
-        cmap = kwargs.get('cmap', 'afmhot_u')
+        cmap = kwargs.get('cmap', 'afmhot')
         interpolation = kwargs.get('interpolation', 'gaussian')
         pol = kwargs.get('pol', '')
         scale = kwargs.get('scale', None)

@@ -18,8 +18,8 @@ import ehtim as eh
 #
 # List the source/epoch/file name----------------------------------------------------------------------------------------
 #
-filename         = r'C:\Users\hendr\Documents\PhD\multiresolution_support\static_pol.fits'
-img = eh.image.load_fits(filename)
+#filename         = r'C:\Users\hendr\OneDrive\Documents\PhD\multiresolution_support\static_pol.fits'
+#img = eh.image.load_fits(filename)
 cbar_lims = [0, 0.0025]
 
 #
